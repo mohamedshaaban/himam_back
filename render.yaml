@@ -41,6 +41,12 @@ services:
         generateValue: false
         sync: false
 
+      # Without this, Laravel falls back to SQLite in a file inside the
+      # container: ephemeral (wiped on every deploy) and owned by root, so
+      # request-time writes fail while boot-time migrations appear to succeed.
+      - key: DB_CONNECTION
+        value: mysql
+
       # sync:false means "prompt me in the dashboard" — never commit these.
       - key: APP_URL
         sync: false

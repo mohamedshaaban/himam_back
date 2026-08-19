@@ -6,6 +6,25 @@ set -e
 sed -ri "s/^Listen .*/Listen ${PORT}/" /etc/apache2/ports.conf
 sed -ri "s/<VirtualHost \*:[0-9]+>/<VirtualHost *:${PORT}>/" /etc/apache2/sites-available/000-default.conf
 
+# SQLite keeps its database on the container filesystem. Two things bite here:
+# this script runs as root while Apache serves as www-data, and SQLite needs to
+# write a journal *next to* the file — so the directory must be writable too,
+# not just the database. Without this, boot-time migrations succeed as root and
+# every request-time INSERT then fails, which looks like a 500 on login only.
+DB_CONNECTION="${DB_CONNECTION:-sqlite}"
+if [ "$DB_CONNECTION" = "sqlite" ]; then
+  DB_PATH="${DB_DATABASE:-/var/www/html/database/database.sqlite}"
+  mkdir -p "$(dirname "$DB_PATH")"
+  touch "$DB_PATH"
+  chown -R www-data:www-data "$(dirname "$DB_PATH")"
+  chmod 775 "$(dirname "$DB_PATH")"
+  chmod 664 "$DB_PATH"
+
+  echo "NOTE: running on SQLite inside the container. The filesystem is"
+  echo "      ephemeral, so all data is lost on every deploy and restart."
+  echo "      Set DB_CONNECTION=mysql and the DB_* variables to keep it."
+fi
+
 if [ -z "${APP_KEY:-}" ]; then
   echo "WARNING: APP_KEY is empty. Generate one with 'php artisan key:generate --show'"
   echo "         and set it as an environment variable, or sessions and encrypted"
