@@ -18,8 +18,14 @@ if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
   php artisan migrate --force --no-interaction
 fi
 
-# Seed only when explicitly asked, so a redeploy never silently duplicates or
-# resets the programme's content.
+# Seed the catalogue when the database is empty. This is idempotent — the
+# command checks for existing content first — so a redeploy can never duplicate
+# the programme. Free tiers usually have no shell, so boot is the only reliable
+# place to do this.
+php artisan himam:seed-if-empty --no-interaction
+
+# Force a full re-seed. Deliberate resets only: this WILL duplicate content if
+# the catalogue is already populated.
 if [ "${RUN_SEEDERS:-false}" = "true" ]; then
   php artisan db:seed --force --no-interaction
 fi
