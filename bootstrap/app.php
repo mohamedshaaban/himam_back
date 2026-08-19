@@ -25,6 +25,14 @@ return Application::configure(basePath: dirname(__DIR__))
                 'api' => url('/api'),
                 'health' => url('/up'),
                 'locales' => array_keys(config('himam.locales')),
+
+                // Surfaced deliberately: a misconfigured FRONTEND_URL is the
+                // single most common deployment failure here, and it is
+                // otherwise invisible until the browser blocks a request. This
+                // leaks nothing — any origin can already read it from a CORS
+                // preflight.
+                'allowed_origins' => config('cors.allowed_origins'),
+                'database' => config('database.default'),
             ]));
         },
     )
