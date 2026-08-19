@@ -15,10 +15,28 @@
 |
 */
 
-$origins = array_values(array_filter(array_map(
+$configured = array_values(array_filter(array_map(
     'trim',
-    explode(',', (string) env('FRONTEND_URL', 'http://localhost:5173'))
+    explode(',', (string) env('FRONTEND_URL', ''))
 )));
+
+/*
+ * Fallbacks for when FRONTEND_URL isn't set. These are this project's known,
+ * fixed frontends — the local dev server and the published GitHub Pages site —
+ * and an allowed origin is public information anyway (any caller can read it
+ * from a preflight). Defaulting to them means a deployment that forgets the
+ * variable degrades to "works" rather than "every request silently blocked",
+ * which is otherwise an invisible and very confusing failure.
+ *
+ * Setting FRONTEND_URL still overrides this list entirely.
+ */
+$defaults = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'https://mohamedshaaban.github.io',
+];
+
+$origins = $configured !== [] ? $configured : $defaults;
 
 return [
 
@@ -26,7 +44,7 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => $origins !== [] ? $origins : ['http://localhost:5173'],
+    'allowed_origins' => $origins,
 
     'allowed_origins_patterns' => array_values(array_filter(array_map(
         'trim',
