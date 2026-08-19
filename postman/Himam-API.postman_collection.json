@@ -1,0 +1,1259 @@
+{
+  "info": {
+    "_postman_id": "b1f3c9a2-6d47-4d1e-9a7c-himam000api1",
+    "name": "Himam API",
+    "description": "API for the Himam reading programme (منصة همم — جمعية مرتقي العلمية).\n\n## Getting started\n\n1. Import the companion environment `Himam-Local.postman_environment.json`, or set `baseUrl` on this collection.\n2. Run **Auth → Login (reader)** and **Auth → Login (admin)** once. Their test scripts capture the bearer tokens into `{{token}}` and `{{adminToken}}` automatically — nothing to copy by hand.\n3. Everything else is then runnable.\n\n## Language\n\nEvery request sends `Accept-Language: {{lang}}` from the collection-level header. Change `lang` to `ar`, `en`, `fr` or `ur` and re-send any request to get the same record back in that language — book titles, quiz questions, badges and notifications are all translated server-side, not just the interface.\n\nResolution order is `?lang=` → `X-Locale` → `Accept-Language` → the signed-in reader's saved preference. Responses carry `Content-Language`.\n\n## Auth\n\nLaravel Sanctum bearer tokens. Reader routes need `{{token}}`; admin routes need `{{adminToken}}` and an account with `role = admin` (the API returns 403 for a reader, 401 for anonymous).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8000/api", "type": "string" },
+    { "key": "lang", "value": "ar", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "adminToken", "value": "", "type": "string" },
+    { "key": "bookId", "value": "1", "type": "string" },
+    { "key": "sectionId", "value": "1", "type": "string" },
+    { "key": "levelId", "value": "1", "type": "string" },
+    { "key": "badgeId", "value": "1", "type": "string" },
+    { "key": "questionId", "value": "1", "type": "string" },
+    { "key": "announcementId", "value": "1", "type": "string" },
+    { "key": "slideId", "value": "1", "type": "string" },
+    { "key": "certificateId", "value": "1", "type": "string" },
+    { "key": "userId", "value": "3", "type": "string" },
+    { "key": "verificationCode", "value": "", "type": "string" },
+    { "key": "newReaderEmail", "value": "", "type": "string" },
+    { "key": "quizAnswers", "value": "", "type": "string" },
+    { "key": "adminBookId", "value": "", "type": "string" },
+    { "key": "adminSectionId", "value": "", "type": "string" },
+    { "key": "adminQuestionId", "value": "", "type": "string" },
+    { "key": "adminBadgeId", "value": "", "type": "string" },
+    { "key": "adminCertificateId", "value": "", "type": "string" },
+    { "key": "throwawayUserId", "value": "", "type": "string" },
+    { "key": "throwawayEmail", "value": "", "type": "string" },
+    { "key": "registeredUserId", "value": "", "type": "string" }
+  ],
+  "auth": { "type": "noauth" },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Applied to every request in the collection.",
+          "//",
+          "// Sending Accept keeps Laravel returning JSON for validation and auth",
+          "// failures instead of an HTML redirect, and Accept-Language is what makes",
+          "// the same request come back translated — flip {{lang}} to ar/en/fr/ur.",
+          "pm.request.headers.upsert({ key: 'Accept', value: 'application/json' });",
+          "pm.request.headers.upsert({",
+          "  key: 'Accept-Language',",
+          "  value: pm.collectionVariables.get('lang') || 'ar',",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Email is unique, so a fixed address would 422 on the second run.",
+                  "// Mint a fresh one each time to keep this request re-runnable.",
+                  "pm.collectionVariables.set('newReaderEmail', `reader.${Date.now()}@himam.test`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('returns a token', () => pm.expect(body.token).to.be.a('string').and.not.empty);",
+                  "// Set in both scopes: an environment variable of the same name would",
+                  "// otherwise shadow the collection one and resolve {{token}} to empty.",
+                  "pm.collectionVariables.set('token', body.token);",
+                  "if (pm.environment.name) pm.environment.set('token', body.token);",
+                  "// Remembered so 'Session end' can delete this account again —",
+                  "// otherwise every collection run would leave a reader behind.",
+                  "pm.collectionVariables.set('registeredUserId', body.user.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"قارئ جديد\",\n  \"email\": \"{{newReaderEmail}}\",\n  \"phone\": \"0500000000\",\n  \"city\": \"الرياض\",\n  \"password\": \"password\",\n  \"password_confirmation\": \"password\",\n  \"locale\": \"ar\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+            "description": "Creates a reader account and returns a bearer token. Every notification category starts opted in."
+          }
+        },
+        {
+          "name": "Login (reader)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "// Set in both scopes: an environment variable of the same name would",
+                  "// otherwise shadow the collection one and resolve {{token}} to empty.",
+                  "pm.collectionVariables.set('token', body.token);",
+                  "if (pm.environment.name) pm.environment.set('token', body.token);",
+                  "pm.test('token captured', () => pm.expect(pm.collectionVariables.get('token')).to.not.be.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"mohammed@himam.test\",\n  \"password\": \"password\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "description": "Saves the bearer token into {{token}}. Wrong credentials return one generic message for both unknown-email and wrong-password, so the endpoint can't be used to discover which addresses are registered."
+          }
+        },
+        {
+          "name": "Login (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('adminToken', body.token);",
+                  "if (pm.environment.name) pm.environment.set('adminToken', body.token);",
+                  "pm.test('role is admin', () => pm.expect(body.user.role).to.eql('admin'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@himam.test\",\n  \"password\": \"password\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] },
+            "description": "Saves the admin bearer token into {{adminToken}}."
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Reference (public)",
+      "item": [
+        {
+          "name": "Locales",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('four locales', () => pm.expect(body.data).to.have.lengthOf(4));",
+                  "pm.test('reports direction', () => pm.expect(body.data[0]).to.have.property('dir'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/locales", "host": ["{{baseUrl}}"], "path": ["locales"] },
+            "description": "The supported languages with their text direction. Driven by config/himam.php — the single place a language is added."
+          }
+        },
+        {
+          "name": "Levels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/levels", "host": ["{{baseUrl}}"], "path": ["levels"] }
+          }
+        },
+        {
+          "name": "Slides for a screen",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/slides/home",
+              "host": ["{{baseUrl}}"],
+              "path": ["slides", "home"]
+            },
+            "description": "Carousel slides for one screen. Valid screens: home, books, badges, certificates, honor, notifications, account."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Books & reading",
+      "item": [
+        {
+          "name": "List books",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "if (body.data.length) {",
+                  "  pm.collectionVariables.set('bookId', body.data[0].id);",
+                  "  pm.test('titles are resolved strings, not maps', () =>",
+                  "    pm.expect(body.data[0].title).to.be.a('string'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/books?level_id=",
+              "host": ["{{baseUrl}}"],
+              "path": ["books"],
+              "query": [{ "key": "level_id", "value": "", "description": "Optional filter" }]
+            },
+            "description": "Public, but sending a reader token adds a per-book `progress` block. Anonymous callers get no progress block at all rather than misleading zeroes."
+          }
+        },
+        {
+          "name": "Show book",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/books/{{bookId}}", "host": ["{{baseUrl}}"], "path": ["books", "{{bookId}}"] },
+            "description": "Includes the section list, each flagged with whether this reader has read and passed it."
+          }
+        },
+        {
+          "name": "Read a section",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('body text is present', () => pm.expect(pm.response.json().data.body).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/sections/{{sectionId}}", "host": ["{{baseUrl}}"], "path": ["sections", "{{sectionId}}"] },
+            "description": "Returns the section text and marks it read. Paragraphs are separated by blank lines. Passing still requires the quiz."
+          }
+        },
+        {
+          "name": "Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/dashboard", "host": ["{{baseUrl}}"], "path": ["dashboard"] },
+            "description": "Everything the home screen renders in one round trip: stats, unread count, recent badges and certificates, and the top five readers."
+          }
+        },
+        {
+          "name": "My progress",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('breaks down by level', () => pm.expect(body.levels).to.be.an('array'));",
+                  "pm.test('drills down to sections', () =>",
+                  "  pm.expect(body.levels[0].books[0].sections[0]).to.have.property('passed'));",
+                  "pm.test('twelve months of points', () => pm.expect(body.monthly_points).to.have.lengthOf(12));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/progress", "host": ["{{baseUrl}}"], "path": ["progress"] },
+            "description": "The reader's progress screen: overall counters, a level → book → section breakdown with each section's read/passed state, best score and attempt count, the automatic badges they're closest to earning, the last ten attempts, and points credited per month over the last year.\n\nResolved from three bulk reads rather than a query per section, so it stays a handful of queries however large the catalogue grows."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Quiz",
+      "item": [
+        {
+          "name": "Get questions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('answer key is NOT exposed', () => {",
+                  "  body.data.forEach(q => q.options.forEach(o =>",
+                  "    pm.expect(o).to.not.have.property('is_correct')));",
+                  "});",
+                  "",
+                  "// Build an answer body picking the first option of each question,",
+                  "// so the Submit request below is runnable straight away.",
+                  "const answers = {};",
+                  "body.data.forEach(q => { answers[q.id] = q.options[0].id; });",
+                  "pm.collectionVariables.set('quizAnswers', JSON.stringify({ answers }));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/sections/{{sectionId}}/quiz", "host": ["{{baseUrl}}"], "path": ["sections", "{{sectionId}}", "quiz"] },
+            "description": "The questions without the answer key — `is_correct` never leaves the server here. The test script stashes a runnable answer body into {{quizAnswers}}."
+          }
+        },
+        {
+          "name": "Submit answers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('graded', () => pm.expect(body).to.have.property('score'));",
+                  "pm.test('correct options returned only after grading', () =>",
+                  "  pm.expect(body.correct_options).to.be.an('object'));",
+                  "console.log(`score ${body.score}/${body.total}, passed=${body.passed}, +${body.points_awarded} points`);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": {\n    \"1\": 1,\n    \"2\": 5,\n    \"3\": 8\n  }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/sections/{{sectionId}}/quiz", "host": ["{{baseUrl}}"], "path": ["sections", "{{sectionId}}", "quiz"] },
+            "description": "`answers` maps question id → chosen option id.\n\nGrading happens server-side. A pass at or above the configured ratio (60%) credits the section's points, but only the first time — retries after a pass are free to take and earn nothing. The response reports anything newly unlocked in `new_badges` and `new_certificates`.\n\nRun **Get questions** first if you want ids that match your data."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Badges, certificates & honour board",
+      "item": [
+        {
+          "name": "Badges",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/badges", "host": ["{{baseUrl}}"], "path": ["badges"] },
+            "description": "All active badges with an `earned` flag. Locked badges stay visible on purpose — the design greys them out as motivation."
+          }
+        },
+        {
+          "name": "My certificates",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.data.length) {",
+                  "  pm.collectionVariables.set('certificateId', body.data[0].id);",
+                  "  const url = body.data[0].verification_url || '';",
+                  "  pm.collectionVariables.set('verificationCode', url.split('/').pop());",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/certificates", "host": ["{{baseUrl}}"], "path": ["certificates"] }
+          }
+        },
+        {
+          "name": "Verify a certificate (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/certificates/verify/{{verificationCode}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["certificates", "verify", "{{verificationCode}}"]
+            },
+            "description": "The endpoint behind the QR code on every certificate. Public and deliberately minimal — enough to confirm the certificate is genuine, with no contact details. Run **My certificates** first to populate {{verificationCode}}."
+          }
+        },
+        {
+          "name": "Honour board",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/honor-board?scope=all&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["honor-board"],
+              "query": [
+                { "key": "scope", "value": "all", "description": "all | month | year" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "`month` and `year` sum the points actually earned inside that window rather than reusing the lifetime total, so a monthly board isn't just a copy of the all-time one."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Notifications & profile",
+      "item": [
+        {
+          "name": "Announcements",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.data.length) pm.collectionVariables.set('announcementId', body.data[0].id);",
+                  "console.log('unread:', body.meta.unread);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/announcements", "host": ["{{baseUrl}}"], "path": ["announcements"] },
+            "description": "Broadcasts plus anything addressed to this reader, minus muted categories. Drafts (no `published_at`) never appear."
+          }
+        },
+        {
+          "name": "Show announcement",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/announcements/{{announcementId}}", "host": ["{{baseUrl}}"], "path": ["announcements", "{{announcementId}}"] },
+            "description": "Opening one marks it read."
+          }
+        },
+        {
+          "name": "Mark all read",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/announcements/read-all", "host": ["{{baseUrl}}"], "path": ["announcements", "read-all"] }
+          }
+        },
+        {
+          "name": "Notification preferences",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/notification-preferences", "host": ["{{baseUrl}}"], "path": ["notification-preferences"] }
+          }
+        },
+        {
+          "name": "Update a preference",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"category\": \"honor\",\n  \"enabled\": true\n}" },
+            "url": { "raw": "{{baseUrl}}/notification-preferences", "host": ["{{baseUrl}}"], "path": ["notification-preferences"] },
+            "description": "Categories: program, exam, results, honor, general.\n\nSet `enabled: false` to mute one — muted categories disappear from the announcements feed entirely. The example uses `true` so a full collection run leaves the demo account's feed intact."
+          }
+        },
+        {
+          "name": "Update profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"محمد احمد\",\n  \"city\": \"جدة\",\n  \"locale\": \"ar\"\n}" },
+            "url": { "raw": "{{baseUrl}}/profile", "host": ["{{baseUrl}}"], "path": ["profile"] },
+            "description": "`locale` is the account-level language preference, which follows the reader to any device."
+          }
+        },
+        {
+          "name": "Change password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"current_password\": \"password\",\n  \"password\": \"password\",\n  \"password_confirmation\": \"password\"\n}" },
+            "url": { "raw": "{{baseUrl}}/profile/password", "host": ["{{baseUrl}}"], "path": ["profile", "password"] },
+            "description": "Revokes every other access token, so other sessions must sign in again.\n\nThe example deliberately sets the password to its current value: a whole-collection run would otherwise change the demo account's password and lock you out of every later run. Put a real new password in when you actually want to change it."
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "Admin",
+      "description": "Requires {{adminToken}} and an account with role = admin. A reader token returns 403; anonymous returns 401.\n\nUnlike the reader endpoints, these return translatable fields as full `locale => text` maps so the dashboard can offer one input per language.",
+      "item": [
+        {
+          "name": "Stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('has totals', () => pm.expect(pm.response.json()).to.have.property('totals'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/stats", "host": ["{{baseUrl}}"], "path": ["admin", "stats"] }
+          }
+        },
+        {
+          "name": "Access control — reader is refused",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 for a non-admin', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/admin/stats", "host": ["{{baseUrl}}"], "path": ["admin", "stats"] },
+            "description": "Deliberately sends the *reader* token to prove the API enforces the role itself, independently of the dashboard's UI guard."
+          }
+        },
+
+        {
+          "name": "Levels",
+          "item": [
+            {
+              "name": "List levels",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/levels", "host": ["{{baseUrl}}"], "path": ["admin", "levels"] }
+              }
+            },
+            {
+              "name": "Create level",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) pm.collectionVariables.set('levelId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": {\n    \"ar\": \"المستوى الرابع\",\n    \"en\": \"Fourth Level\",\n    \"fr\": \"Quatrième niveau\",\n    \"ur\": \"چوتھا درجہ\"\n  },\n  \"description\": {\n    \"ar\": \"مستوى متقدم.\",\n    \"en\": \"An advanced level.\"\n  },\n  \"position\": 4,\n  \"is_active\": true\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/admin/levels", "host": ["{{baseUrl}}"], "path": ["admin", "levels"] },
+                "description": "One language is enough — the rest fall back per field. An entirely empty translatable field is rejected."
+              }
+            },
+            {
+              "name": "Update level",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": {\n    \"ar\": \"المستوى الرابع\",\n    \"en\": \"Fourth Level (revised)\"\n  }\n}" },
+                "url": { "raw": "{{baseUrl}}/admin/levels/{{levelId}}", "host": ["{{baseUrl}}"], "path": ["admin", "levels", "{{levelId}}"] }
+              }
+            },
+            {
+              "name": "Delete level",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/levels/{{levelId}}", "host": ["{{baseUrl}}"], "path": ["admin", "levels", "{{levelId}}"] },
+                "description": "Refused with 422 while the level still has books — the cascade would silently void readers' progress."
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Books & content",
+          "item": [
+            {
+              "name": "List books",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/books", "host": ["{{baseUrl}}"], "path": ["admin", "books"] }
+              }
+            },
+            {
+              "name": "Create book",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) pm.collectionVariables.set('adminBookId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"level_id\": 1,\n  \"title\": {\n    \"ar\": \"آداب طالب العلم\",\n    \"en\": \"The Manners of the Student of Knowledge\",\n    \"fr\": \"Les convenances de l'étudiant en sciences\",\n    \"ur\": \"طالبِ علم کے آداب\"\n  },\n  \"author\": {\n    \"ar\": \"إعداد إدارة البرنامج\",\n    \"en\": \"Prepared by the programme administration\"\n  },\n  \"description\": {\n    \"ar\": \"كتاب في أخلاق طلب العلم وآدابه.\",\n    \"en\": \"On the ethics of seeking knowledge.\"\n  },\n  \"cover\": \"assets/banner.svg\",\n  \"pages\": 150,\n  \"points\": 450,\n  \"position\": 6,\n  \"is_published\": true\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/admin/books", "host": ["{{baseUrl}}"], "path": ["admin", "books"] }
+              }
+            },
+            {
+              "name": "Show book (with sections & questions)",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/books/{{adminBookId}}", "host": ["{{baseUrl}}"], "path": ["admin", "books", "{{adminBookId}}"] }
+              }
+            },
+            {
+              "name": "Update book",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"points\": 500,\n  \"is_published\": true\n}" },
+                "url": { "raw": "{{baseUrl}}/admin/books/{{adminBookId}}", "host": ["{{baseUrl}}"], "path": ["admin", "books", "{{adminBookId}}"] }
+              }
+            },
+            {
+              "name": "List sections of a book",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/books/{{adminBookId}}/sections", "host": ["{{baseUrl}}"], "path": ["admin", "books", "{{adminBookId}}", "sections"] }
+              }
+            },
+            {
+              "name": "Create section",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) pm.collectionVariables.set('adminSectionId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": {\n    \"ar\": \"النية في طلب العلم\",\n    \"en\": \"Intention in Seeking Knowledge\"\n  },\n  \"body\": {\n    \"ar\": \"الفقرة الأولى.\\n\\nالفقرة الثانية.\",\n    \"en\": \"First paragraph.\\n\\nSecond paragraph.\"\n  }\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/admin/books/{{adminBookId}}/sections", "host": ["{{baseUrl}}"], "path": ["admin", "books", "{{adminBookId}}", "sections"] },
+                "description": "Omit `position` to append. Paragraphs in `body` are separated by a blank line (\\n\\n)."
+              }
+            },
+            {
+              "name": "Update section",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"title\": {\n    \"ar\": \"النية وتجديدها\"\n  }\n}" },
+                "url": { "raw": "{{baseUrl}}/admin/sections/{{adminSectionId}}", "host": ["{{baseUrl}}"], "path": ["admin", "sections", "{{adminSectionId}}"] }
+              }
+            },
+            {
+              "name": "List questions of a section",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/sections/{{adminSectionId}}/questions", "host": ["{{baseUrl}}"], "path": ["admin", "sections", "{{adminSectionId}}", "questions"] }
+              }
+            },
+            {
+              "name": "Create question",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) pm.collectionVariables.set('adminQuestionId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": {\n    \"ar\": \"بأي أصل يبدأ الكتاب؟\",\n    \"en\": \"What root does the book open with?\"\n  },\n  \"options\": [\n    { \"is_correct\": true,  \"text\": { \"ar\": \"تصحيح النية\", \"en\": \"Correcting one's intention\" } },\n    { \"is_correct\": false, \"text\": { \"ar\": \"حفظ المتون\", \"en\": \"Memorising the primers\" } },\n    { \"is_correct\": false, \"text\": { \"ar\": \"كثرة المجالس\", \"en\": \"Attending many gatherings\" } }\n  ]\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/admin/sections/{{adminSectionId}}/questions", "host": ["{{baseUrl}}"], "path": ["admin", "sections", "{{adminSectionId}}", "questions"] },
+                "description": "A question and its options are saved together — a question with no options is unanswerable. Exactly one option must be `is_correct`, and at least two options are required; anything else is a 422."
+              }
+            },
+            {
+              "name": "Update question",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": { \"ar\": \"بأي أصل يبدأ الكتاب؟\" },\n  \"options\": [\n    { \"is_correct\": true,  \"text\": { \"ar\": \"تصحيح النية\" } },\n    { \"is_correct\": false, \"text\": { \"ar\": \"حفظ المتون\" } }\n  ]\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/admin/questions/{{adminQuestionId}}", "host": ["{{baseUrl}}"], "path": ["admin", "questions", "{{adminQuestionId}}"] },
+                "description": "Options are replaced wholesale — editing in place would leave stale rows behind when a choice is removed."
+              }
+            },
+            {
+              "name": "Delete question",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/questions/{{adminQuestionId}}", "host": ["{{baseUrl}}"], "path": ["admin", "questions", "{{adminQuestionId}}"] }
+              }
+            },
+            {
+              "name": "Delete section",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/sections/{{adminSectionId}}", "host": ["{{baseUrl}}"], "path": ["admin", "sections", "{{adminSectionId}}"] }
+              }
+            },
+            {
+              "name": "Delete book",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/books/{{adminBookId}}", "host": ["{{baseUrl}}"], "path": ["admin", "books", "{{adminBookId}}"] },
+                "description": "Last in the folder on purpose: the requests above create a book, a section and a question, exercise them, then tear them down again — so running this folder leaves your catalogue exactly as it found it."
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Badges",
+          "item": [
+            {
+              "name": "List badges",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/badges", "host": ["{{baseUrl}}"], "path": ["admin", "badges"] }
+              }
+            },
+            {
+              "name": "Create badge",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Everything below in this folder acts on the badge just created,",
+                      "// so a folder run never edits or deletes a seeded badge.",
+                      "if (pm.response.code === 201) pm.collectionVariables.set('adminBadgeId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": { \"ar\": \"وسام جديد\", \"en\": \"New badge\" },\n  \"description\": { \"ar\": \"وصف الوسام.\", \"en\": \"Badge description.\" },\n  \"image\": \"assets/badge.png\",\n  \"criteria_type\": \"sections_passed\",\n  \"criteria_value\": 3,\n  \"position\": 8,\n  \"is_active\": true\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/admin/badges", "host": ["{{baseUrl}}"], "path": ["admin", "badges"] },
+                "description": "`criteria_type`: manual | sections_passed | books_completed | points. Non-manual badges are evaluated automatically after every passed quiz."
+              }
+            },
+            {
+              "name": "Update badge",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"criteria_value\": 4\n}" },
+                "url": { "raw": "{{baseUrl}}/admin/badges/{{adminBadgeId}}", "host": ["{{baseUrl}}"], "path": ["admin", "badges", "{{adminBadgeId}}"] }
+              }
+            },
+            {
+              "name": "Award badge to a reader",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"user_id\": {{userId}}\n}" },
+                "url": { "raw": "{{baseUrl}}/admin/badges/{{adminBadgeId}}/award", "host": ["{{baseUrl}}"], "path": ["admin", "badges", "{{adminBadgeId}}", "award"] },
+                "description": "For the recognitions that aren't automatic."
+              }
+            },
+            {
+              "name": "Revoke badge",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"user_id\": {{userId}}\n}" },
+                "url": { "raw": "{{baseUrl}}/admin/badges/{{adminBadgeId}}/revoke", "host": ["{{baseUrl}}"], "path": ["admin", "badges", "{{adminBadgeId}}", "revoke"] }
+              }
+            },
+            {
+              "name": "Delete badge",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/badges/{{adminBadgeId}}", "host": ["{{baseUrl}}"], "path": ["admin", "badges", "{{adminBadgeId}}"] }
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Announcements",
+          "item": [
+            {
+              "name": "List announcements",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/announcements", "host": ["{{baseUrl}}"], "path": ["admin", "announcements"] }
+              }
+            },
+            {
+              "name": "Create announcement (draft)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) pm.collectionVariables.set('announcementId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tag\": { \"ar\": \"إعلان\", \"en\": \"Notice\" },\n  \"title\": { \"ar\": \"عنوان الإشعار\", \"en\": \"Announcement title\" },\n  \"body\": { \"ar\": \"نص الإشعار.\", \"en\": \"Announcement body.\" },\n  \"image\": \"assets/banner.svg\",\n  \"category\": \"program\",\n  \"user_id\": null\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/admin/announcements", "host": ["{{baseUrl}}"], "path": ["admin", "announcements"] },
+                "description": "`user_id: null` broadcasts to everyone; an id sends it to one reader. Without `published_at` it stays a draft and no reader sees it.\n\nCategories: general, program, exam, results, honor, certificate."
+              }
+            },
+            {
+              "name": "Publish / unpublish",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"published\": true\n}" },
+                "url": { "raw": "{{baseUrl}}/admin/announcements/{{announcementId}}/publish", "host": ["{{baseUrl}}"], "path": ["admin", "announcements", "{{announcementId}}", "publish"] }
+              }
+            },
+            {
+              "name": "Delete announcement",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/announcements/{{announcementId}}", "host": ["{{baseUrl}}"], "path": ["admin", "announcements", "{{announcementId}}"] }
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Slides",
+          "item": [
+            {
+              "name": "List slides",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/slides?screen=",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "slides"],
+                  "query": [{ "key": "screen", "value": "", "description": "Optional filter" }]
+                }
+              }
+            },
+            {
+              "name": "Create slide",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) pm.collectionVariables.set('slideId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"screen\": \"home\",\n  \"image\": \"assets/banner.svg\",\n  \"caption\": { \"ar\": \"تعليق الشريحة\", \"en\": \"Slide caption\" },\n  \"href\": null,\n  \"position\": 3,\n  \"is_active\": true\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/admin/slides", "host": ["{{baseUrl}}"], "path": ["admin", "slides"] },
+                "description": "An `href` turns the slide into a video card with a play overlay."
+              }
+            },
+            {
+              "name": "Update slide",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"is_active\": false\n}" },
+                "url": { "raw": "{{baseUrl}}/admin/slides/{{slideId}}", "host": ["{{baseUrl}}"], "path": ["admin", "slides", "{{slideId}}"] }
+              }
+            },
+            {
+              "name": "Delete slide",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/slides/{{slideId}}", "host": ["{{baseUrl}}"], "path": ["admin", "slides", "{{slideId}}"] }
+              }
+            }
+          ]
+        },
+
+        {
+          "name": "Users & certificates",
+          "item": [
+            {
+              "name": "List users",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/users?search=&role=&per_page=25",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "users"],
+                  "query": [
+                    { "key": "search", "value": "", "description": "Matches name or email" },
+                    { "key": "role", "value": "", "description": "student | admin" },
+                    { "key": "per_page", "value": "25" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Show user",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{userId}}"] },
+                "description": "Includes the reader's stats and their last 20 quiz attempts."
+              }
+            },
+            {
+              "name": "Update user",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"city\": \"الرياض\",\n  \"role\": \"student\"\n}" },
+                "url": { "raw": "{{baseUrl}}/admin/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{userId}}"] },
+                "description": "You cannot remove your own admin role — it would lock you out of the dashboard mid-session, so it takes a second administrator.\n\nThe example writes back the seeded values so a full run doesn't quietly reshuffle your demo reader."
+              }
+            },
+            {
+              "name": "Recalculate a reader's progress",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/users/{{userId}}/recalculate", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{userId}}", "recalculate"] },
+                "description": "Re-runs the badge and certificate rules. Useful after content changes — for example when a level gains a book that readers had already completed under the old structure."
+              }
+            },
+            {
+              "name": "Create a throwaway reader",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.collectionVariables.set('throwawayEmail', `throwaway.${Date.now()}@himam.test`);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) pm.collectionVariables.set('throwawayUserId', pm.response.json().user.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"حساب مؤقت\",\n  \"email\": \"{{throwawayEmail}}\",\n  \"password\": \"password\",\n  \"password_confirmation\": \"password\"\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] },
+                "description": "Exists so the delete below has something of its own to remove. Deleting a seeded reader would take their attempts, badges and certificates with them."
+              }
+            },
+            {
+              "name": "Delete user (the throwaway)",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/users/{{throwawayUserId}}", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{throwawayUserId}}"] },
+                "description": "Point this at {{userId}} to delete a real reader — deliberately not the default. You also cannot delete your own account."
+              }
+            },
+            {
+              "name": "List certificates",
+              "request": {
+                "method": "GET",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/certificates?user_id=",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "certificates"],
+                  "query": [{ "key": "user_id", "value": "", "description": "Optional filter" }]
+                }
+              }
+            },
+            {
+              "name": "Issue certificate by hand",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// The revoke below removes exactly this certificate, so a folder run",
+                      "// doesn't leave stray certificates piling up on the demo reader.",
+                      "if (pm.response.code === 201) pm.collectionVariables.set('adminCertificateId', pm.response.json().data.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": { "mode": "raw", "raw": "{\n  \"user_id\": {{userId}},\n  \"level_id\": 1\n}" },
+                "url": { "raw": "{{baseUrl}}/admin/certificates", "host": ["{{baseUrl}}"], "path": ["admin", "certificates"] },
+                "description": "For cases the automatic rule doesn't cover. Normally a level certificate is issued the moment a reader passes every section of every book in that level."
+              }
+            },
+            {
+              "name": "Revoke certificate",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+                "url": { "raw": "{{baseUrl}}/admin/certificates/{{adminCertificateId}}", "host": ["{{baseUrl}}"], "path": ["admin", "certificates", "{{adminCertificateId}}"] }
+              }
+            }
+          ]
+        }
+      ]
+    },
+
+    {
+      "name": "Session end (run last)",
+      "description": "Logout revokes {{token}}, so everything after it in a full-collection run would fail with 401. It lives here, at the bottom, so the collection runs cleanly top to bottom.\n\nThe cleanup request first removes the account **Auth → Register** created, which is what keeps a whole-collection run from leaving a new reader behind every time.",
+      "item": [
+        {
+          "name": "Clean up the registered reader",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Skipped harmlessly when Register wasn't run in this pass.",
+                  "if (pm.collectionVariables.get('registeredUserId')) {",
+                  "  pm.test('registered reader removed', () => pm.response.to.have.status(200));",
+                  "}",
+                  "pm.collectionVariables.set('registeredUserId', '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/admin/users/{{registeredUserId}}", "host": ["{{baseUrl}}"], "path": ["admin", "users", "{{registeredUserId}}"] },
+            "description": "Deletes the account created by Auth → Register so the collection is repeatable. Needs {{adminToken}}."
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('token', '');",
+                  "if (pm.environment.name) pm.environment.unset('token');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/logout", "host": ["{{baseUrl}}"], "path": ["auth", "logout"] },
+            "description": "Revokes the current access token only, leaving other devices signed in. Re-run **Auth → Login (reader)** to get a fresh one."
+          }
+        }
+      ]
+    }
+  ]
+}
