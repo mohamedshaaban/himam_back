@@ -31,6 +31,12 @@ RUN { \
 
 # Laravel serves from public/, never from the project root — exposing the root
 # would publish .env and the whole source tree.
+# Containers have an ephemeral filesystem, so file logs vanish with the
+# instance and are invisible in a host's log stream. Writing to stderr puts
+# exceptions where the platform actually collects them.
+ENV LOG_CHANNEL=stderr
+ENV LOG_STACK=stderr
+
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 RUN sed -ri 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
         /etc/apache2/sites-available/*.conf /etc/apache2/apache2.conf \
