@@ -1,0 +1,61 @@
+# Render Blueprint — deploys the API straight from this repo's Dockerfile.
+#
+# Render's free web service sleeps after ~15 minutes idle and takes 30–60s to
+# wake. Fine for a demo; if you need it always-on, the same Dockerfile deploys
+# unchanged to Koyeb, which doesn't sleep but asks for a card at signup.
+#
+# Render has no free MySQL, so point the DB_* variables at a free MySQL-
+# compatible provider (TiDB Cloud Serverless, Aiven, Clever Cloud).
+
+services:
+  - type: web
+    name: himam-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /up
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_LOCALE
+        value: ar
+      - key: APP_FALLBACK_LOCALE
+        value: en
+      - key: LOG_LEVEL
+        value: warning
+
+      # Laravel's own tables, so no Redis is needed on a free tier.
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+
+      # Render generates this once and keeps it stable across deploys.
+      - key: APP_KEY
+        generateValue: false
+        sync: false
+
+      # sync:false means "prompt me in the dashboard" — never commit these.
+      - key: APP_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_DATABASE
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+
+      # Set to true for the FIRST deploy only, to load the books, quizzes and
+      # badges. Leaving it on would re-seed and duplicate the catalogue.
+      - key: RUN_SEEDERS
+        value: "false"
