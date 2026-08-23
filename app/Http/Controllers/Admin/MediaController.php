@@ -22,6 +22,24 @@ class MediaController extends Controller
     private const DIRECTORY = 'uploads';
 
     /**
+     * A URL the browser can actually resolve.
+     *
+     * For a local disk Laravel builds this from APP_URL, which is wrong more
+     * often than it is right: wrong port in development, wrong scheme behind a
+     * proxy, stale after a domain change. A root-relative path sidesteps all of
+     * that — the client resolves it against whichever origin served the API.
+     * Remote disks (S3, R2) return a genuine absolute URL, which is kept.
+     */
+    private function publicUrl(string $path): string
+    {
+        if (config('filesystems.disks.public.driver') === 'local') {
+            return '/storage/'.ltrim($path, '/');
+        }
+
+        return Storage::disk('public')->url($path);
+    }
+
+    /**
      * Previously uploaded images, newest first — this backs the picker's
      * "browse" tab so an author can reuse an image instead of re-uploading it.
      */
@@ -36,7 +54,7 @@ class MediaController extends Controller
         $files = collect($disk->files(self::DIRECTORY))
             ->map(fn (string $path) => [
                 'path' => $path,
-                'url' => $disk->url($path),
+                'url' => $this->publicUrl($path),
                 'name' => basename($path),
                 'size' => $disk->size($path),
                 'modified_at' => $disk->lastModified($path),
@@ -73,7 +91,7 @@ class MediaController extends Controller
         return response()->json([
             'data' => [
                 'path' => $path,
-                'url' => $disk->url($path),
+                'url' => $this->publicUrl($path),
                 'name' => $name,
                 'size' => $disk->size($path),
             ],
