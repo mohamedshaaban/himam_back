@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use App\Services\LocaleRegistry;
 
 class AuthController extends Controller
 {
@@ -22,7 +23,7 @@ class AuthController extends Controller
             'phone' => ['nullable', 'string', 'max:32'],
             'city' => ['nullable', 'string', 'max:120'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'locale' => ['nullable', Rule::in(array_keys(config('himam.locales')))],
+            'locale' => ['nullable', Rule::in(app(LocaleRegistry::class)->codes())],
         ]);
 
         $user = User::create([

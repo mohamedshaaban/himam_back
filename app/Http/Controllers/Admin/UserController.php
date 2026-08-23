@@ -9,6 +9,7 @@ use App\Services\ProgressService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use App\Services\LocaleRegistry;
 
 class UserController extends Controller
 {
@@ -54,7 +55,7 @@ class UserController extends Controller
             'city' => ['nullable', 'string', 'max:120'],
             'avatar' => ['nullable', 'string', 'max:255'],
             'role' => ['sometimes', Rule::in(['student', 'admin'])],
-            'locale' => ['sometimes', Rule::in(array_keys(config('himam.locales')))],
+            'locale' => ['sometimes', Rule::in(app(LocaleRegistry::class)->codes())],
             'level_id' => ['nullable', 'exists:levels,id'],
             'points' => ['sometimes', 'integer', 'min:0'],
             'password' => ['nullable', 'string', 'min:8'],

@@ -18,15 +18,17 @@ class ReferenceController extends Controller
 {
     public function locales(): JsonResponse
     {
-        $locales = collect(config('himam.locales'))
+        $registry = app(\App\Services\LocaleRegistry::class);
+
+        $locales = collect($registry->all())
             ->map(fn (array $meta, string $code) => ['code' => $code] + $meta)
             ->values();
 
         return response()->json([
             'data' => $locales,
             'meta' => [
-                'default' => config('app.locale'),
-                'fallback' => config('app.fallback_locale'),
+                'default' => $registry->default(),
+                'fallback' => $registry->default(),
                 'current' => app()->getLocale(),
             ],
         ]);

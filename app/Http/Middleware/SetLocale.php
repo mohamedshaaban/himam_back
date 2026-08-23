@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\LocaleRegistry;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -9,26 +10,32 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Resolves the response language for every API request.
  *
- * Precedence: an explicit ?lang= override, then the Accept-Language header the
- * frontend sends, then the signed-in reader's saved preference, then the app
- * default. Anything not in config('himam.locales') is ignored rather than
- * trusted, so a malformed header can't knock the API into an unknown locale.
+ * Precedence: an explicit ?lang= override, then the X-Locale header, then the
+ * Accept-Language header the browser sends, then the signed-in reader's saved
+ * preference. Anything the platform doesn't currently support is ignored rather
+ * than trusted, so a malformed header — or a language an administrator has
+ * since disabled — can't knock the API into an unknown locale.
+ *
+ * The supported set comes from the database via LocaleRegistry, so adding a
+ * language takes effect here without a deploy.
  */
 class SetLocale
 {
+    public function __construct(private readonly LocaleRegistry $locales)
+    {
+    }
+
     public function handle(Request $request, Closure $next): Response
     {
-        $supported = array_keys(config('himam.locales'));
-
         $candidates = [
             $request->query('lang'),
             $request->header('X-Locale'),
-            $this->fromAcceptLanguage($request, $supported),
+            $this->fromAcceptLanguage($request),
             $request->user()?->locale,
         ];
 
         foreach ($candidates as $candidate) {
-            if ($candidate && in_array($candidate, $supported, true)) {
+            if ($this->locales->supports($candidate)) {
                 app()->setLocale($candidate);
                 break;
             }
@@ -43,12 +50,12 @@ class SetLocale
     /**
      * Picks the highest-weighted Accept-Language entry we actually support.
      */
-    private function fromAcceptLanguage(Request $request, array $supported): ?string
+    private function fromAcceptLanguage(Request $request): ?string
     {
         foreach ($request->getLanguages() as $language) {
             $base = strtolower(substr($language, 0, 2));
 
-            if (in_array($base, $supported, true)) {
+            if ($this->locales->supports($base)) {
                 return $base;
             }
         }

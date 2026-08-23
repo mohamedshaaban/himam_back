@@ -66,6 +66,14 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
     Route::get('stats', Admin\StatsController::class);
 
+    // Languages are data, not config: adding one here makes it immediately
+    // available to every translatable field without a deploy or a migration.
+    Route::apiResource('locales', Admin\LocaleController::class)->except('show');
+
+    Route::get('media', [Admin\MediaController::class, 'index']);
+    Route::post('media', [Admin\MediaController::class, 'store']);
+    Route::delete('media', [Admin\MediaController::class, 'destroy']);
+
     Route::apiResource('levels', Admin\LevelController::class);
 
     Route::apiResource('books', Admin\BookController::class);

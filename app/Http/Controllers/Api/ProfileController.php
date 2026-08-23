@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use App\Services\LocaleRegistry;
 
 class ProfileController extends Controller
 {
@@ -21,7 +22,7 @@ class ProfileController extends Controller
             'phone' => ['nullable', 'string', 'max:32'],
             'city' => ['nullable', 'string', 'max:120'],
             'avatar' => ['nullable', 'string', 'max:255'],
-            'locale' => ['sometimes', Rule::in(array_keys(config('himam.locales')))],
+            'locale' => ['sometimes', Rule::in(app(LocaleRegistry::class)->codes())],
         ]);
 
         $user->update($data);

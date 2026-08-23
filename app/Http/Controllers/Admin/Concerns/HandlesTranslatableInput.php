@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Concerns;
 
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use App\Services\LocaleRegistry;
 
 /**
  * Admin endpoints read and write translatable fields as full locale => text
@@ -19,7 +20,7 @@ trait HandlesTranslatableInput
     {
         $rules = [$field => [$required ? 'required' : 'nullable', 'array']];
 
-        foreach (array_keys(config('himam.locales')) as $locale) {
+        foreach (app(LocaleRegistry::class)->codes() as $locale) {
             $rules["{$field}.{$locale}"] = ['nullable', 'string'];
         }
 

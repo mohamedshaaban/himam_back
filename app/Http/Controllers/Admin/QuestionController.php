@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Services\LocaleRegistry;
 
 class QuestionController extends Controller
 {
@@ -80,7 +81,7 @@ class QuestionController extends Controller
             'options.*.text' => ['required', 'array'],
         ];
 
-        foreach (array_keys(config('himam.locales')) as $locale) {
+        foreach (app(LocaleRegistry::class)->codes() as $locale) {
             $rules["options.*.text.{$locale}"] = ['nullable', 'string'];
         }
 

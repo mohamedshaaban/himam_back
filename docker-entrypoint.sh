@@ -49,6 +49,11 @@ if [ "${RUN_SEEDERS:-false}" = "true" ]; then
   php artisan db:seed --force --no-interaction
 fi
 
+# Uploaded images are served from storage/app/public via this symlink. It lives
+# on the container filesystem, so on an ephemeral host uploads vanish with the
+# instance — point FILESYSTEM_DISK at S3/R2 to keep them.
+php artisan storage:link --force || true
+
 php artisan config:cache
 php artisan route:cache
 php artisan event:cache
