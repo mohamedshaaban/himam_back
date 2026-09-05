@@ -125,6 +125,14 @@
       "key": "registeredUserId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "throwawayPageId",
+      "value": ""
+    },
+    {
+      "key": "throwawayFaqId",
+      "value": ""
     }
   ],
   "auth": {
@@ -824,7 +832,12 @@
           "name": "Available certificates",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/certificates/available",
               "host": [
@@ -2410,6 +2423,365 @@
               }
             }
           ]
+        },
+        {
+          "name": "List pages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/pages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "pages"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Create page",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/pages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "pages"
+              ]
+            },
+            "description": "Slug is free-form, so a new page needs no route and no deploy.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slug\": \"terms\",\n  \"title\": {\n    \"ar\": \"الشروط\",\n    \"en\": \"Terms\"\n  },\n  \"body\": {\n    \"ar\": \"<p>نص الشروط.</p>\",\n    \"en\": \"<p>Terms text.</p>\"\n  },\n  \"is_published\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Keeps the run repeatable: the delete below removes exactly this row.",
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('throwawayPageId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update page",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/pages/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "pages",
+                "1"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": {\n    \"ar\": \"حول التطبيق\",\n    \"en\": \"About Himam\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete page",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/pages/{{throwawayPageId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "pages",
+                "{{throwawayPageId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "List FAQs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/faqs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "faqs"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Create FAQ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/faqs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "faqs"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": {\n    \"ar\": \"سؤال جديد\",\n    \"en\": \"A new question\"\n  },\n  \"answer\": {\n    \"ar\": \"<p>الإجابة.</p>\",\n    \"en\": \"<p>The answer.</p>\"\n  },\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('throwawayFaqId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete FAQ",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/faqs/{{throwawayFaqId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "faqs",
+                "{{throwawayFaqId}}"
+              ]
+            },
+            "description": "Removes the question the request above created, so the run is repeatable."
+          },
+          "response": []
+        },
+        {
+          "name": "Reorder FAQs",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/faqs/reorder",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "faqs",
+                "reorder"
+              ]
+            },
+            "description": "The whole ordering at once — reordering row by row would leave the list inconsistent between requests.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\n    1,\n    2,\n    3,\n    4,\n    5,\n    6\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.variables.get('baseUrl');",
+                  "pm.sendRequest({",
+                  "  url: base + '/admin/faqs',",
+                  "  method: 'GET',",
+                  "  header: {",
+                  "    Accept: 'application/json',",
+                  "    Authorization: 'Bearer ' + pm.variables.get('adminToken')",
+                  "  }",
+                  "}, (err, res) => {",
+                  "  if (err || res.code !== 200) return;",
+                  "  const ids = res.json().data.map((row) => row.id);",
+                  "  pm.request.body.update({ mode: 'raw', raw: JSON.stringify({ ids }) });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get contact details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/contact",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "contact"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Update contact details",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/contact",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "contact"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"support@himam.test\",\n  \"phone\": \"+966 11 000 0000\",\n  \"note\": {\n    \"ar\": \"نرد خلال يوم عمل.\",\n    \"en\": \"We reply within one working day.\"\n  },\n  \"social\": [\n    {\n      \"platform\": \"x\",\n      \"url\": \"https://x.com/\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
         }
       ]
     },

@@ -105,6 +105,14 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
 
     Route::apiResource('slides', Admin\SlideController::class)->except('show');
 
+    // Static content. Pages are keyed by slug, so adding an eighth page here
+    // needs no route and no deploy.
+    Route::apiResource('pages', Admin\PageController::class);
+    Route::post('faqs/reorder', [Admin\FaqController::class, 'reorder']);
+    Route::apiResource('faqs', Admin\FaqController::class)->except('show');
+    Route::get('contact', [Admin\ContactController::class, 'show']);
+    Route::put('contact', [Admin\ContactController::class, 'update']);
+
     Route::apiResource('users', Admin\UserController::class)->except('store');
     Route::post('users/{user}/recalculate', [Admin\UserController::class, 'recalculate']);
 
