@@ -37,9 +37,11 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Every API response is language-negotiated, so the locale has to be
-        // resolved before any controller reads a translatable attribute.
+        // Order matters. The reader has to be resolved first: public routes
+        // personalise their answer when a token is present, and SetLocale falls
+        // back to that reader's saved language.
         $middleware->api(prepend: [
+            \App\Http\Middleware\ResolveOptionalUser::class,
             \App\Http\Middleware\SetLocale::class,
         ]);
 
