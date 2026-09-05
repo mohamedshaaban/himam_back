@@ -12,7 +12,8 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Precedence: an explicit ?lang= override, then the X-Locale header, then the
  * Accept-Language header the browser sends, then the signed-in reader's saved
- * preference. Anything the platform doesn't currently support is ignored rather
+ * preference, and finally the language marked default in the dashboard.
+ * Anything the platform doesn't currently support is ignored rather
  * than trusted, so a malformed header — or a language an administrator has
  * since disabled — can't knock the API into an unknown locale.
  *
@@ -33,6 +34,12 @@ class SetLocale
             $this->fromAcceptLanguage($request),
             $request->user()?->locale,
         ];
+
+        // The registry's default comes last rather than app.locale: the language
+        // marked default in the dashboard is the one the programme means, and
+        // leaving it to config would make the answer depend on an env var that
+        // happens to be set on one host and not another.
+        $candidates[] = $this->locales->default();
 
         foreach ($candidates as $candidate) {
             if ($this->locales->supports($candidate)) {
