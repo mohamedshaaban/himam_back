@@ -21,6 +21,12 @@ use Illuminate\Support\Facades\Route;
 Route::post('auth/register', [Api\AuthController::class, 'register']);
 Route::post('auth/login', [Api\AuthController::class, 'login']);
 
+// Static content: about, privacy, support and the FAQ. Public, because a
+// privacy policy behind a login is no use to someone deciding whether to join.
+Route::get('pages/{slug}', [Api\ContentController::class, 'page']);
+Route::get('faqs', [Api\ContentController::class, 'faqs']);
+Route::get('contact', [Api\ContentController::class, 'contact']);
+
 Route::get('locales', [Api\ReferenceController::class, 'locales']);
 Route::get('levels', [Api\ReferenceController::class, 'levels']);
 Route::get('slides/{screen}', [Api\ReferenceController::class, 'slides']);
@@ -51,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('sections/{section}/quiz', [Api\QuizController::class, 'submit']);
 
     Route::get('certificates', [Api\CertificateController::class, 'index']);
+    Route::get('certificates/available', [Api\CertificateController::class, 'available']);
     Route::get('certificates/{certificate}', [Api\CertificateController::class, 'show']);
 
     Route::get('announcements', [Api\AnnouncementController::class, 'index']);

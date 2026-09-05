@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             // validation rules that guard them read the supported list.
             LocaleSeeder::class,
             ContentSeeder::class,
+            ContentPageSeeder::class,
             BadgeSeeder::class,
             AnnouncementSeeder::class,
             SlideSeeder::class,
