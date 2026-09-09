@@ -50,6 +50,10 @@ class AuthController extends Controller
             $user->notificationPreferences()->create(['category' => $category, 'enabled' => true]);
         }
 
+        // Reload so database defaults — points starts at 0 — come back as
+        // themselves rather than as the nulls the unsaved model holds.
+        $user->refresh();
+
         return response()->json([
             'token' => $user->createToken('himam')->plainTextToken,
             'user' => new UserResource($user->load('level')),
