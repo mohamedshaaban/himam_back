@@ -18,16 +18,28 @@ class AuthController extends Controller
     public function register(Request $request): JsonResponse
     {
         $data = $request->validate([
+            // The name as it should appear on the certificate, which is why it
+            // is required even though the rest of the profile is not.
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'phone' => ['nullable', 'string', 'max:32'],
-            'city' => ['nullable', 'string', 'max:120'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+
+            'gender' => ['nullable', Rule::in(User::GENDERS)],
+            'age_band' => ['nullable', Rule::in(User::AGE_BANDS)],
+            'education_level' => ['nullable', Rule::in(User::EDUCATION_LEVELS)],
+
+            'phone' => ['nullable', 'string', 'max:32'],
+            'whatsapp' => ['nullable', 'string', 'max:32'],
+            'city' => ['nullable', 'string', 'max:120'],
+            'country' => ['nullable', 'string', 'max:120'],
+
+            'accepts_email' => ['nullable', 'boolean'],
             'locale' => ['nullable', Rule::in(app(LocaleRegistry::class)->codes())],
         ]);
 
         $user = User::create([
             ...$data,
+            'accepts_email' => (bool) ($data['accepts_email'] ?? false),
             'locale' => $data['locale'] ?? app()->getLocale(),
             'role' => 'student',
         ]);

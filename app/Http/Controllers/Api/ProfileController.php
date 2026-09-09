@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -19,8 +20,14 @@ class ProfileController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'gender' => ['nullable', Rule::in(User::GENDERS)],
+            'age_band' => ['nullable', Rule::in(User::AGE_BANDS)],
+            'education_level' => ['nullable', Rule::in(User::EDUCATION_LEVELS)],
             'phone' => ['nullable', 'string', 'max:32'],
+            'whatsapp' => ['nullable', 'string', 'max:32'],
             'city' => ['nullable', 'string', 'max:120'],
+            'country' => ['nullable', 'string', 'max:120'],
+            'accepts_email' => ['sometimes', 'boolean'],
             'avatar' => ['nullable', 'string', 'max:255'],
             'locale' => ['sometimes', Rule::in(app(LocaleRegistry::class)->codes())],
         ]);

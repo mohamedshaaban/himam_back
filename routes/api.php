@@ -21,6 +21,11 @@ use Illuminate\Support\Facades\Route;
 Route::post('auth/register', [Api\AuthController::class, 'register']);
 Route::post('auth/login', [Api\AuthController::class, 'login']);
 
+// Forgotten password. Public by necessity — a reader who cannot sign in
+// cannot present a token.
+Route::post('auth/forgot-password', [Api\PasswordResetController::class, 'forgot']);
+Route::post('auth/reset-password', [Api\PasswordResetController::class, 'reset']);
+
 // Static content: about, privacy, support and the FAQ. Public, because a
 // privacy policy behind a login is no use to someone deciding whether to join.
 Route::get('pages/{slug}', [Api\ContentController::class, 'page']);
@@ -63,6 +68,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('announcements', [Api\AnnouncementController::class, 'index']);
     Route::post('announcements/read-all', [Api\AnnouncementController::class, 'markAllRead']);
     Route::get('announcements/{announcement}', [Api\AnnouncementController::class, 'show']);
+    Route::post('announcements/{announcement}/read', [Api\AnnouncementController::class, 'markRead']);
 
     Route::get('notification-preferences', [Api\AnnouncementController::class, 'preferences']);
     Route::put('notification-preferences', [Api\AnnouncementController::class, 'updatePreferences']);

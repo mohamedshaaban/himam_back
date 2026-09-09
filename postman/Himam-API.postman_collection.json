@@ -133,6 +133,14 @@
     {
       "key": "throwawayFaqId",
       "value": ""
+    },
+    {
+      "key": "resetToken",
+      "value": ""
+    },
+    {
+      "key": "readerEmail",
+      "value": "mohammed@himam.test"
     }
   ],
   "auth": {
@@ -211,7 +219,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"قارئ جديد\",\n  \"email\": \"{{newReaderEmail}}\",\n  \"phone\": \"0500000000\",\n  \"city\": \"الرياض\",\n  \"password\": \"password\",\n  \"password_confirmation\": \"password\",\n  \"locale\": \"ar\"\n}"
+              "raw": "{\n  \"name\": \"قارئ جديد\",\n  \"email\": \"{{newReaderEmail}}\",\n  \"phone\": \"0500000000\",\n  \"city\": \"الرياض\",\n  \"password\": \"password\",\n  \"password_confirmation\": \"password\",\n  \"locale\": \"ar\",\n  \"gender\": \"male\",\n  \"age_band\": \"31_45\",\n  \"education_level\": \"bachelor\",\n  \"whatsapp\": \"+96555000111\",\n  \"country\": \"Kuwait\",\n  \"accepts_email\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/register",
@@ -223,7 +231,7 @@
                 "register"
               ]
             },
-            "description": "Creates a reader account and returns a bearer token. Every notification category starts opted in."
+            "description": "Creates a reader. Beyond name, email and password the association's form also collects gender, age band, education level, country, a WhatsApp number with its international code, and consent to be emailed — all optional, and each validated against a fixed set where one applies."
           }
         },
         {
@@ -333,6 +341,86 @@
               ]
             }
           }
+        },
+        {
+          "name": "Forgot password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "description": "Emails a reset link. The reply is identical whether or not the address is registered, so the endpoint cannot be used to discover which addresses have accounts. Repeating it inside the throttle window returns 429.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{readerEmail}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reset password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
+            },
+            "description": "Sets the new password against the emailed token. Copy the token from the reset link into the resetToken variable first — it is single use, expires, and revokes every existing API token for that account when it succeeds. Left unsent by default so a collection run does not change a demo password.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{resetToken}}\",\n  \"email\": \"{{readerEmail}}\",\n  \"password\": \"newsecret123\",\n  \"password_confirmation\": \"newsecret123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const expected = pm.collectionVariables.get('resetToken') ? 200 : 422;",
+                  "pm.test('reset responds ' + expected + ' (422 until a real token is pasted in)', () => {",
+                  "  pm.expect(pm.response.code).to.eql(expected);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -961,6 +1049,31 @@
             },
             "description": "Opening one marks it read."
           }
+        },
+        {
+          "name": "Mark one read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/announcements/{{announcementId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "announcements",
+                "{{announcementId}}",
+                "read"
+              ]
+            },
+            "description": "Marks a single notification read and returns the new unread count, so the bell can update without refetching the feed. Opening a notification with GET also marks it read, but a GET may be served from a cache and never reach the server — this is what the app calls explicitly."
+          },
+          "response": []
         },
         {
           "name": "Mark all read",
