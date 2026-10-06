@@ -230,6 +230,36 @@
           "else if (auth.includes('token')) signIn('readerEmail', 'token');"
         ]
       }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Applied to every request in the collection.",
+          "//",
+          "// A 401 here almost always means the token has died rather than that the",
+          "// request is wrong: the deployed database is ephemeral, so every redeploy",
+          "// empties the tokens table and every token issued before it stops being",
+          "// recognised. The header still looks correct in the Headers tab, which",
+          "// makes it a genuinely confusing failure to read.",
+          "//",
+          "// Clearing the variable lets the pre-request script sign in again on the",
+          "// next send, so the fix is to press Send a second time rather than to go",
+          "// hunting through the request.",
+          "if (pm.response.code === 401) {",
+          "  const auth = pm.request.headers.get('Authorization') || '';",
+          "  const which = auth.includes('adminToken') ? 'adminToken'",
+          "              : auth.includes('token') ? 'token'",
+          "              : null;",
+          "",
+          "  if (which && pm.collectionVariables.get(which)) {",
+          "    pm.collectionVariables.set(which, '');",
+          "    console.log(`[himam] ${which} was rejected and has been cleared — press Send again to sign in.`);",
+          "  }",
+          "}"
+        ]
+      }
     }
   ],
   "item": [
