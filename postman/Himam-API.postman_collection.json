@@ -157,6 +157,14 @@
     {
       "key": "selectiveProgramId",
       "value": "3"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@himam.test"
+    },
+    {
+      "key": "password",
+      "value": "password"
     }
   ],
   "auth": {
@@ -183,7 +191,43 @@
           "    key: 'Accept-Language',",
           "    value: pm.collectionVariables.get('lang') || 'ar',",
           "  });",
-          "}"
+          "}",
+          "",
+          "// ── Sign in automatically when a token is missing ──────────────────────",
+          "//",
+          "// Every authenticated request carries `Bearer {{token}}`. That variable is",
+          "// filled by the Login request, so opening any other request first used to",
+          "// send `Bearer ` and come back 401 — a confusing failure, because the",
+          "// header is right there in the Headers tab and looks correct.",
+          "//",
+          "// Fetching the token here means any request works on its own. It runs only",
+          "// when the variable is empty, so it costs one extra call per session.",
+          "const signIn = (emailVar, tokenVar) => {",
+          "  if (pm.collectionVariables.get(tokenVar)) return;",
+          "",
+          "  const base = pm.variables.get('baseUrl');",
+          "  const email = pm.variables.get(emailVar);",
+          "  const password = pm.variables.get('password') || 'password';",
+          "",
+          "  if (!base || !email) return;",
+          "",
+          "  pm.sendRequest({",
+          "    url: base + '/auth/login',",
+          "    method: 'POST',",
+          "    header: { 'Content-Type': 'application/json', Accept: 'application/json' },",
+          "    body: { mode: 'raw', raw: JSON.stringify({ email, password }) },",
+          "  }, (err, res) => {",
+          "    if (err || res.code !== 200) return;",
+          "    pm.collectionVariables.set(tokenVar, res.json().token);",
+          "  });",
+          "};",
+          "",
+          "// Which token a request needs is decided by the header it already carries,",
+          "// so a request that needs neither triggers no sign-in at all.",
+          "const auth = pm.request.headers.get('Authorization') || '';",
+          "",
+          "if (auth.includes('adminToken')) signIn('adminEmail', 'adminToken');",
+          "else if (auth.includes('token')) signIn('readerEmail', 'token');"
         ]
       }
     }
