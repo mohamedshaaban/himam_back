@@ -21,6 +21,8 @@ class DatabaseSeeder extends Seeder
             AnnouncementSeeder::class,
             SlideSeeder::class,
             UserSeeder::class,
+            // After users: a selective programme needs someone to assign it to.
+            ProgramSeeder::class,
         ]);
     }
 }

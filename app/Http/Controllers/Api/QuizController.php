@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\EnforcesProgramAccess;
 use App\Http\Resources\BadgeResource;
 use App\Http\Resources\CertificateResource;
 use App\Http\Resources\QuestionResource;
@@ -13,6 +14,8 @@ use Illuminate\Http\Request;
 
 class QuizController extends Controller
 {
+    use EnforcesProgramAccess;
+
     public function __construct(private readonly ProgressService $progress)
     {
     }
@@ -23,6 +26,8 @@ class QuizController extends Controller
     public function show(Request $request, BookSection $section): JsonResponse
     {
         abort_unless($section->book->is_published, 404);
+
+        $this->assertCanRead($request, $section->book);
 
         $questions = $section->questions()->with('options')->get();
 
@@ -61,6 +66,8 @@ class QuizController extends Controller
     public function submit(Request $request, BookSection $section): JsonResponse
     {
         abort_unless($section->book->is_published, 404);
+
+        $this->assertCanRead($request, $section->book);
 
         $validated = $request->validate([
             'answers' => ['required', 'array', 'min:1'],

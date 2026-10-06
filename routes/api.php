@@ -38,6 +38,11 @@ Route::get('levels', [Api\ReferenceController::class, 'levels']);
 Route::get('slides/{screen}', [Api\ReferenceController::class, 'slides']);
 
 // Reachable without signing in so the landing page can preview the catalogue.
+// Reading programmes. Public: a general programme is part of the pitch, and a
+// selective one is simply absent for anyone it was not assigned to.
+Route::get('programs', [Api\ProgramController::class, 'index']);
+Route::get('programs/{program}', [Api\ProgramController::class, 'show']);
+
 Route::get('books', [Api\BookController::class, 'index']);
 Route::get('books/{book}', [Api\BookController::class, 'show']);
 Route::get('badges', [Api\BadgeController::class, 'index']);
@@ -111,6 +116,10 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::post('announcements/{announcement}/publish', [Admin\AnnouncementController::class, 'publish']);
 
     Route::apiResource('slides', Admin\SlideController::class)->except('show');
+
+    Route::apiResource('programs', Admin\ProgramController::class);
+    Route::put('programs/{program}/books', [Admin\ProgramController::class, 'syncBooks']);
+    Route::put('programs/{program}/members', [Admin\ProgramController::class, 'syncMembers']);
 
     // Static content. Pages are keyed by slug, so adding an eighth page here
     // needs no route and no deploy.

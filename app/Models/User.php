@@ -100,6 +100,12 @@ class User extends Authenticatable
     /**
      * Sections this reader has passed the quiz for.
      */
+    /** Selective programmes an administrator has assigned to this reader. */
+    public function programs(): BelongsToMany
+    {
+        return $this->belongsToMany(Program::class)->withPivot(['assigned_by', 'assigned_at']);
+    }
+
     public function passedSectionIds(): array
     {
         return $this->progress()

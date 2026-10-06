@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\EnforcesProgramAccess;
 use App\Http\Resources\BookResource;
 use App\Models\Book;
 use Illuminate\Http\Request;
@@ -10,6 +11,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class BookController extends Controller
 {
+    use EnforcesProgramAccess;
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $books = Book::published()
@@ -27,6 +30,8 @@ class BookController extends Controller
     public function show(Request $request, Book $book): BookResource
     {
         abort_unless($book->is_published, 404);
+
+        $this->assertCanRead($request, $book);
 
         $book->load(['level', 'sections' => fn ($q) => $q->withCount('questions')]);
 

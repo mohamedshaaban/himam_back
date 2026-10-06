@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\EnforcesProgramAccess;
 use App\Http\Resources\SectionResource;
 use App\Models\BookSection;
 use App\Services\ProgressService;
@@ -10,6 +11,8 @@ use Illuminate\Http\Request;
 
 class SectionController extends Controller
 {
+    use EnforcesProgramAccess;
+
     public function __construct(private readonly ProgressService $progress)
     {
     }
@@ -20,6 +23,8 @@ class SectionController extends Controller
     public function show(Request $request, BookSection $section): SectionResource
     {
         abort_unless($section->book->is_published, 404);
+
+        $this->assertCanRead($request, $section->book);
 
         $section->load('book')->loadCount('questions');
 

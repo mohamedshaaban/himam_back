@@ -141,6 +141,18 @@
     {
       "key": "readerEmail",
       "value": "mohammed@himam.test"
+    },
+    {
+      "key": "programId",
+      "value": "1"
+    },
+    {
+      "key": "lockedBookId",
+      "value": "4"
+    },
+    {
+      "key": "throwawayProgramId",
+      "value": ""
     }
   ],
   "auth": {
@@ -622,6 +634,96 @@
             }
           },
           "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reading programs",
+      "description": "Programmes and their books. A general programme is open to all, a sequential one unlocks book by book, and a selective one is simply absent for a reader it was not assigned to.",
+      "item": [
+        {
+          "name": "Programs visible to me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/programs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "programs"
+              ]
+            },
+            "description": "Send no Authorization header to see what an anonymous visitor sees — the selective programme disappears."
+          },
+          "response": []
+        },
+        {
+          "name": "Program detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/programs/{{programId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "programs",
+                "{{programId}}"
+              ]
+            },
+            "description": "Books in programme order, each with unlocked, status and blocked_by. blocked_by names the book that has to be finished first, so the screen can say which one rather than only showing a padlock."
+          },
+          "response": []
+        },
+        {
+          "name": "Locked book is refused by the server",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/books/{{lockedBookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "books",
+                "{{lockedBookId}}"
+              ]
+            },
+            "description": "The lock is enforced here, not only in the interface. Set lockedBookId to a book that a sequential programme has not unlocked yet and this returns 403 with reason=locked_previous. A book in a programme the reader was never assigned returns 404 instead, so its existence is not revealed."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 when unlocked, 403 when the chain blocks it, 404 when not assigned', () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -2932,6 +3034,196 @@
                 }
               }
             }
+          },
+          "response": []
+        },
+        {
+          "name": "List programs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/programs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "programs"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Create program",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/programs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "programs"
+              ]
+            },
+            "description": "type is general, sequential or selective.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": {\n    \"ar\": \"برنامج تجريبي\",\n    \"en\": \"Trial programme\"\n  },\n  \"description\": {\n    \"en\": \"Created by the collection run.\"\n  },\n  \"type\": \"sequential\",\n  \"is_public\": true,\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('throwawayProgramId', pm.response.json().data.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set program books (and their order)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/programs/{{throwawayProgramId}}/books",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "programs",
+                "{{throwawayProgramId}}",
+                "books"
+              ]
+            },
+            "description": "The whole list in one request. Position in the array is the order: for a sequential programme that is what \"the previous book\" means, so applying a reshuffle piecemeal would leave readers on an order nobody intended.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"book_ids\": [\n    1,\n    2,\n    3\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Assign readers (selective only)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/programs/{{throwawayProgramId}}/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "programs",
+                "{{throwawayProgramId}}",
+                "members"
+              ]
+            },
+            "description": "422 on a programme that is not selective — the other types have no member list.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_ids\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 unless the programme is selective', () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete program",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/programs/{{throwawayProgramId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "programs",
+                "{{throwawayProgramId}}"
+              ]
+            },
+            "description": "Removes the programme the run created, so a repeat run starts clean."
           },
           "response": []
         }

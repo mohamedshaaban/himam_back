@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Book extends Model
@@ -45,5 +46,11 @@ class Book extends Model
     public function sections(): HasMany
     {
         return $this->hasMany(BookSection::class)->orderBy('position');
+    }
+
+    /** The reading programmes this book appears in, if any. */
+    public function programs(): BelongsToMany
+    {
+        return $this->belongsToMany(Program::class)->withPivot('order_index');
     }
 }
