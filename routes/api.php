@@ -33,6 +33,7 @@ Route::get('faqs', [Api\ContentController::class, 'faqs']);
 Route::get('contact', [Api\ContentController::class, 'contact']);
 
 Route::get('locales', [Api\ReferenceController::class, 'locales']);
+Route::get('countries', [Api\ReferenceController::class, 'countries']);
 Route::get('levels', [Api\ReferenceController::class, 'levels']);
 Route::get('slides/{screen}', [Api\ReferenceController::class, 'slides']);
 

@@ -11,6 +11,7 @@ Base URL: `https://himam-back.onrender.com/api`
 | `POST /auth/forgot-password` | public | Emails a reset link |
 | `POST /auth/reset-password` | public | Sets the new password against the emailed token |
 | `POST /announcements/{id}/read` | reader | Marks one notification read |
+| `GET /countries` | public | Country list for the registration form |
 
 ---
 
@@ -28,10 +29,7 @@ going back to fill in their age band.
 | `email` | yes | Must be unique. |
 | `password` | yes | At least 8 characters, with `password_confirmation`. |
 | `gender` | no | `male` · `female` |
-| `age_band` | no | `under_21` · `21_30` · `31_45` · `over_46` |
-| `education_level` | no | `primary` · `intermediate` · `secondary` · `diploma` · `bachelor` · `master` · `doctorate` · `other` |
 | `phone` | no | Free text, max 32. |
-| `whatsapp` | no | Free text, max 32. Kept separate from `phone` because the form asks for a number with its international code, which is often not the number given for calls. |
 | `city` | no | Free text. |
 | `country` | no | Free text — the app sends the country's localised name. |
 | `accepts_email` | no | Boolean. Consent to be emailed about the programme, which is a separate question from the in-app notification preferences. |
@@ -46,9 +44,6 @@ going back to fill in their age band.
   "password": "secret123",
   "password_confirmation": "secret123",
   "gender": "male",
-  "age_band": "31_45",
-  "education_level": "bachelor",
-  "whatsapp": "+96555000111",
   "country": "Kuwait",
   "accepts_email": true
 }
@@ -64,10 +59,7 @@ going back to fill in their age band.
     "name": "سالم بن أحمد",
     "email": "salem@himam.test",
     "gender": "male",
-    "age_band": "31_45",
-    "education_level": "bachelor",
     "phone": null,
-    "whatsapp": "+96555000111",
     "city": null,
     "country": "Kuwait",
     "accepts_email": true,
@@ -93,7 +85,7 @@ Errors are returned per field and are translated. The same request in Arabic:
     "name": ["حقل الاسم مطلوب."],
     "email": ["قيمة حقل البريد الإلكتروني مستخدمة من قبل."],
     "password": ["يجب ألا يقل طول حقل كلمة المرور عن 8 حروف."],
-    "age_band": ["قيمة حقل العمر غير صحيحة."]
+    "gender": ["قيمة حقل الجنس غير صحيحة."]
   }
 }
 ```
@@ -191,6 +183,32 @@ decides the notification has been seen.
 
 ---
 
+## Countries — `GET /countries`
+
+Public. Backs the country picker on the registration form.
+
+Names and ordering follow the request's language — Arabic names sort by the
+Arabic alphabet, not by their codes. Only ISO 3166-1 codes and dialling codes
+are stored server-side; the names come from PHP's own locale data, so a language
+added later needs no new translation file.
+
+```json
+{
+  "data": [
+    { "code": "ET", "name": "إثيوبيا", "dial_code": "+251" },
+    { "code": "AZ", "name": "أذربيجان", "dial_code": "+994" },
+    { "code": "KW", "name": "الكويت", "dial_code": "+965" }
+  ],
+  "meta": { "locale": "ar" }
+}
+```
+
+114 countries. `dial_code` is there for any screen that asks for a phone number:
+deriving it from the country already chosen is kinder than asking a reader to
+remember it.
+
+---
+
 ## A note on languages
 
 Every message above is returned in the request's language — `?lang=`,
@@ -204,7 +222,7 @@ in English. All 32 messages plus the validation rules are now translated into
 
 ---
 
-The full Postman collection (87 requests) is in [`postman/`](../postman).
+The full Postman collection (89 requests) is in [`postman/`](../postman).
 `Forgot password` and `Reset password` are in the Auth folder; `Mark one read`
 sits beside `Mark all read`. Paste a token from a real reset email into the
 `resetToken` variable before sending `Reset password` — without one it correctly

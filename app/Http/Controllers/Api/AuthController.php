@@ -25,11 +25,8 @@ class AuthController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
 
             'gender' => ['nullable', Rule::in(User::GENDERS)],
-            'age_band' => ['nullable', Rule::in(User::AGE_BANDS)],
-            'education_level' => ['nullable', Rule::in(User::EDUCATION_LEVELS)],
 
             'phone' => ['nullable', 'string', 'max:32'],
-            'whatsapp' => ['nullable', 'string', 'max:32'],
             'city' => ['nullable', 'string', 'max:120'],
             'country' => ['nullable', 'string', 'max:120'],
 

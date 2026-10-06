@@ -14,25 +14,15 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    /** Values the registration form offers, and the only ones accepted. */
+    /** The one registration field with a fixed set of answers. */
     public const GENDERS = ['male', 'female'];
-
-    public const AGE_BANDS = ['under_21', '21_30', '31_45', 'over_46'];
-
-    public const EDUCATION_LEVELS = [
-        'primary', 'intermediate', 'secondary', 'diploma',
-        'bachelor', 'master', 'doctorate', 'other',
-    ];
 
     protected $fillable = [
         'name',
         'email',
         'password',
         'gender',
-        'age_band',
-        'education_level',
         'phone',
-        'whatsapp',
         'city',
         'country',
         'accepts_email',

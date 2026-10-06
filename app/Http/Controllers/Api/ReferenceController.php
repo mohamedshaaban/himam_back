@@ -34,6 +34,20 @@ class ReferenceController extends Controller
         ]);
     }
 
+    /**
+     * Countries for the registration form, named and ordered in the request's
+     * language. Public, because the form is reachable before signing in.
+     */
+    public function countries(): JsonResponse
+    {
+        $locale = app()->getLocale();
+
+        return response()->json([
+            'data' => app(\App\Services\CountryRegistry::class)->all($locale),
+            'meta' => ['locale' => $locale],
+        ]);
+    }
+
     public function levels(): AnonymousResourceCollection
     {
         return LevelResource::collection(

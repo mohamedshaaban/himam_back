@@ -219,7 +219,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"قارئ جديد\",\n  \"email\": \"{{newReaderEmail}}\",\n  \"phone\": \"0500000000\",\n  \"city\": \"الرياض\",\n  \"password\": \"password\",\n  \"password_confirmation\": \"password\",\n  \"locale\": \"ar\",\n  \"gender\": \"male\",\n  \"age_band\": \"31_45\",\n  \"education_level\": \"bachelor\",\n  \"whatsapp\": \"+96555000111\",\n  \"country\": \"Kuwait\",\n  \"accepts_email\": true\n}"
+              "raw": "{\n  \"name\": \"قارئ جديد\",\n  \"email\": \"{{newReaderEmail}}\",\n  \"phone\": \"0500000000\",\n  \"city\": \"الرياض\",\n  \"password\": \"password\",\n  \"password_confirmation\": \"password\",\n  \"locale\": \"ar\",\n  \"gender\": \"male\",\n  \"country\": \"Kuwait\",\n  \"accepts_email\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/register",
@@ -231,7 +231,7 @@
                 "register"
               ]
             },
-            "description": "Creates a reader. Beyond name, email and password the association's form also collects gender, age band, education level, country, a WhatsApp number with its international code, and consent to be emailed — all optional, and each validated against a fixed set where one applies."
+            "description": "Creates a reader. Beyond name, email and password the form also collects gender, country and consent to be emailed — all optional. Fields the form no longer asks for are simply ignored rather than rejected, so an older client still registers successfully."
           }
         },
         {
@@ -373,7 +373,25 @@
               }
             }
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('accepted (200) or throttled (429)', () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 429]);",
+                  "});",
+                  "",
+                  "pm.test('reveals nothing about whether the address is registered', () => {",
+                  "  pm.expect(pm.response.json()).to.have.property('message');",
+                  "  pm.expect(pm.response.json()).to.not.have.property('user');",
+                  "});"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Reset password",
@@ -491,6 +509,27 @@
             },
             "description": "Carousel slides for one screen. Valid screens: home, books, badges, certificates, honor, notifications, account."
           }
+        },
+        {
+          "name": "Countries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/countries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "countries"
+              ]
+            },
+            "description": "Countries for the registration form, named and sorted in the request's language, each with its international dialling code. Public — the form is reachable before signing in. Send Accept-Language, X-Locale or ?lang= to change the language."
+          },
+          "response": []
         }
       ]
     },
