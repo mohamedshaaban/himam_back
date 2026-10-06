@@ -113,9 +113,13 @@ class ProgramController extends Controller
             'user_ids.*' => ['integer', 'exists:users,id'],
         ]);
 
+        // Marked as an assignment rather than a self-enrolment: only an
+        // assignment makes a selective programme visible, so the distinction
+        // is what stops a reader joining their way into a hidden programme.
         $program->members()->sync(
             collect($data['user_ids'])
                 ->mapWithKeys(fn ($id) => [$id => [
+                    'source' => Program::ASSIGNED,
                     'assigned_by' => $request->user()->id,
                     'assigned_at' => now(),
                 ]])

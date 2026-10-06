@@ -60,6 +60,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('profile', [Api\ProfileController::class, 'update']);
     Route::put('profile/password', [Api\ProfileController::class, 'updatePassword']);
 
+    // Enrolling is the reader saying "this is what I am working on"; it
+    // grants nothing they could not already see.
+    Route::post('programs/{program}/enroll', [Api\ProgramController::class, 'enroll']);
+    Route::delete('programs/{program}/enroll', [Api\ProgramController::class, 'leave']);
+
     Route::get('dashboard', Api\DashboardController::class);
     Route::get('progress', Api\ProgressController::class);
 

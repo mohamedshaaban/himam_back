@@ -153,6 +153,10 @@
     {
       "key": "throwawayProgramId",
       "value": ""
+    },
+    {
+      "key": "selectiveProgramId",
+      "value": "3"
     }
   ],
   "auth": {
@@ -719,6 +723,94 @@
                 "exec": [
                   "pm.test('200 when unlocked, 403 when the chain blocks it, 404 when not assigned', () => {",
                   "  pm.expect(pm.response.code).to.be.oneOf([200, 403, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Enroll in a program",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/programs/{{programId}}/enroll",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "programs",
+                "{{programId}}",
+                "enroll"
+              ]
+            },
+            "description": "Joins a programme. Enrolling is a bookmark, not a permission: it grants nothing the reader could not already see, and 404s on a selective programme they were not assigned — which is also how that programme stays hidden."
+          },
+          "response": []
+        },
+        {
+          "name": "Leave a program",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/programs/{{programId}}/enroll",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "programs",
+                "{{programId}}",
+                "enroll"
+              ]
+            },
+            "description": "Removes a self-enrolment only. An administrator’s assignment is not the reader’s to undo, and progress is untouched either way."
+          },
+          "response": []
+        },
+        {
+          "name": "Cannot enroll in an unassigned selective program",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/programs/{{selectiveProgramId}}/enroll",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "programs",
+                "{{selectiveProgramId}}",
+                "enroll"
+              ]
+            },
+            "description": "Expected to 404 for a reader with no assignment to it."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 when assigned, 404 when not', () => {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
                   "});"
                 ]
               }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Program;
+use App\Models\User;
 use App\Services\ProgramAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,8 +25,9 @@ class ProgramController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
+        $enrolled = $this->enrolledIds($user);
 
-        $programs = $this->access->visible($user)->map(function (Program $program) use ($user) {
+        $programs = $this->access->visible($user)->map(function (Program $program) use ($user, $enrolled) {
             $books = $this->access->books($program, $user);
 
             return [
@@ -34,6 +36,7 @@ class ProgramController extends Controller
                 'description' => $program->t('description'),
                 'type' => $program->type,
                 'cover' => $program->cover,
+                'enrolled' => in_array($program->id, $enrolled, true),
                 'books_count' => count($books),
                 'books_completed' => count(array_filter($books, fn ($row) => $row['completed'])),
                 'percent' => $this->percent($books),
@@ -83,11 +86,65 @@ class ProgramController extends Controller
                 'description' => $program->t('description'),
                 'type' => $program->type,
                 'cover' => $program->cover,
+                'enrolled' => in_array($program->id, $this->enrolledIds($user), true),
                 'books' => $books,
                 'books_completed' => $books->where('completed', true)->count(),
                 'percent' => $this->percent($rows),
             ],
         ]);
+    }
+
+    /**
+     * Join a programme.
+     *
+     * Enrolling is a bookmark, not a permission: it says "this is what I am
+     * working on" so a reader's own list stays short. It cannot grant sight of
+     * anything — a reader may only enrol in a programme they can already see,
+     * and a selective one stays out of reach until an administrator assigns it.
+     */
+    public function enroll(Request $request, Program $program): JsonResponse
+    {
+        $user = $request->user();
+
+        abort_unless($this->access->visible($user)->contains('id', $program->id), 404);
+
+        $program->members()->syncWithoutDetaching([
+            $user->id => ['source' => Program::SELF, 'enrolled_at' => now()],
+        ]);
+
+        return response()->json([
+            'data' => ['program_id' => $program->id, 'enrolled' => true],
+        ]);
+    }
+
+    /**
+     * Leave a programme the reader joined themselves.
+     *
+     * An administrator's assignment is not the reader's to undo, so this
+     * removes only a self-enrolment. Progress is untouched either way: leaving
+     * a programme should never cost someone the sections they have passed.
+     */
+    public function leave(Request $request, Program $program): JsonResponse
+    {
+        $user = $request->user();
+
+        $program->members()
+            ->wherePivot('source', Program::SELF)
+            ->detach($user->id);
+
+        return response()->json([
+            'data' => ['program_id' => $program->id, 'enrolled' => false],
+        ]);
+    }
+
+    /**
+     * Programmes this reader has joined or been assigned.
+     *
+     * @return array<int, int>
+     */
+    private function enrolledIds(?User $user): array
+    {
+        return $user ? $user->programs()->pluck('programs.id')->all() : [];
     }
 
     /**

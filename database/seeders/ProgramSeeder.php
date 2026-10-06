@@ -84,7 +84,11 @@ class ProgramSeeder extends Seeder
 
         if ($reader) {
             $selective->members()->syncWithoutDetaching([
-                $reader->id => ['assigned_by' => $admin?->id, 'assigned_at' => now()],
+                $reader->id => [
+                    'source' => Program::ASSIGNED,
+                    'assigned_by' => $admin?->id,
+                    'assigned_at' => now(),
+                ],
             ]);
         }
     }

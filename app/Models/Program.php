@@ -26,6 +26,10 @@ class Program extends Model
 
     public const TYPES = [self::GENERAL, self::SEQUENTIAL, self::SELECTIVE];
 
+    /** How a reader came to be in a programme. */
+    public const ASSIGNED = 'assigned';
+    public const SELF = 'self';
+
     protected $fillable = [
         'title', 'description', 'type', 'is_public',
         'is_active', 'position', 'cover', 'created_by',
@@ -52,12 +56,19 @@ class Program extends Model
             ->orderBy('book_program.order_index');
     }
 
-    /** Readers the administrator has assigned. Selective programmes only. */
+    /** Everyone in this programme, however they got there. */
     public function members(): BelongsToMany
     {
         return $this->belongsToMany(User::class)
-            ->withPivot(['assigned_by', 'assigned_at'])
+            ->withPivot(['source', 'assigned_by', 'assigned_at', 'enrolled_at'])
             ->withTimestamps();
+    }
+
+    /** Readers an administrator put here. This is what a selective programme
+     *  checks: a self-enrolment must never grant sight of a hidden programme. */
+    public function assignees(): BelongsToMany
+    {
+        return $this->members()->wherePivot('source', self::ASSIGNED);
     }
 
     public function creator(): BelongsTo
@@ -95,7 +106,10 @@ class Program extends Model
                 ->where('type', '!=', self::SELECTIVE));
 
             if ($user) {
-                $q->orWhereHas('members', fn (Builder $m) => $m->where('users.id', $user->id));
+                $q->orWhereHas(
+                    'assignees',
+                    fn (Builder $m) => $m->where('users.id', $user->id)
+                );
             }
         });
     }
