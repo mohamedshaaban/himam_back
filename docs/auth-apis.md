@@ -222,7 +222,7 @@ in English. All 32 messages plus the validation rules are now translated into
 
 ---
 
-The full Postman collection (89 requests) is in [`postman/`](../postman).
+The full Postman collection (99 requests) is in [`postman/`](../postman).
 `Forgot password` and `Reset password` are in the Auth folder; `Mark one read`
 sits beside `Mark all read`. Paste a token from a real reset email into the
 `resetToken` variable before sending `Reset password` — without one it correctly

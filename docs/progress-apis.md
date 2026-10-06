@@ -214,4 +214,4 @@ by repeating a section they have already cleared.
 
 ---
 
-The full Postman collection (89 requests) is in [`postman/`](../postman).
+The full Postman collection (99 requests) is in [`postman/`](../postman).
