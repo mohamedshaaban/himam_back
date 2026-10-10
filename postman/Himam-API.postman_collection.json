@@ -309,7 +309,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"قارئ جديد\",\n  \"email\": \"{{newReaderEmail}}\",\n  \"phone\": \"0500000000\",\n  \"city\": \"الرياض\",\n  \"password\": \"password\",\n  \"password_confirmation\": \"password\",\n  \"locale\": \"ar\",\n  \"gender\": \"male\",\n  \"country\": \"Kuwait\",\n  \"accepts_email\": true\n}"
+              "raw": "{\n  \"name\": \"قارئ جديد\",\n  \"email\": \"{{newReaderEmail}}\",\n  \"city\": \"الرياض\",\n  \"password\": \"password\",\n  \"password_confirmation\": \"password\",\n  \"locale\": \"ar\",\n  \"gender\": \"male\",\n  \"country\": \"Kuwait\",\n  \"accepts_email\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/register",
@@ -321,7 +321,7 @@
                 "register"
               ]
             },
-            "description": "Creates a reader. Beyond name, email and password the form also collects gender, country and consent to be emailed — all optional. Fields the form no longer asks for are simply ignored rather than rejected, so an older client still registers successfully."
+            "description": "Creates a reader. Beyond name, email and password the form collects gender, country and consent to be emailed — all optional. Fields the form no longer asks for, phone among them, are ignored rather than rejected, so an older client still registers successfully."
           }
         },
         {

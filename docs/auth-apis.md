@@ -29,7 +29,6 @@ going back to fill in their age band.
 | `email` | yes | Must be unique. |
 | `password` | yes | At least 8 characters, with `password_confirmation`. |
 | `gender` | no | `male` · `female` |
-| `phone` | no | Free text, max 32. |
 | `city` | no | Free text. |
 | `country` | no | Free text — the app sends the country's localised name. |
 | `accepts_email` | no | Boolean. Consent to be emailed about the programme, which is a separate question from the in-app notification preferences. |
