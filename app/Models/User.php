@@ -22,7 +22,6 @@ class User extends Authenticatable
         'email',
         'password',
         'gender',
-        'phone',
         'city',
         'country',
         'accepts_email',

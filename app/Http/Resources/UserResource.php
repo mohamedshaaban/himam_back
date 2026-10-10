@@ -14,7 +14,6 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'gender' => $this->gender,
-            'phone' => $this->phone,
             'city' => $this->city,
             'country' => $this->country,
             'accepts_email' => (bool) $this->accepts_email,

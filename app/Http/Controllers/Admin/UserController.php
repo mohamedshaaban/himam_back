@@ -51,7 +51,6 @@ class UserController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'phone' => ['nullable', 'string', 'max:32'],
             'city' => ['nullable', 'string', 'max:120'],
             'avatar' => ['nullable', 'string', 'max:255'],
             'role' => ['sometimes', Rule::in(['student', 'admin'])],

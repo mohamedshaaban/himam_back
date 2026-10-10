@@ -58,7 +58,6 @@ going back to fill in their age band.
     "name": "سالم بن أحمد",
     "email": "salem@himam.test",
     "gender": "male",
-    "phone": null,
     "city": null,
     "country": "Kuwait",
     "accepts_email": true,

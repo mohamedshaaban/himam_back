@@ -26,9 +26,6 @@ class AuthController extends Controller
 
             'gender' => ['nullable', Rule::in(User::GENDERS)],
 
-            // No phone number here. The registration form does not ask for one,
-            // and the shorter the form the more people finish it; a reader who
-            // wants to add one can do it from their account afterwards.
             'city' => ['nullable', 'string', 'max:120'],
             'country' => ['nullable', 'string', 'max:120'],
 

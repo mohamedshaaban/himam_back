@@ -21,7 +21,6 @@ class ProfileController extends Controller
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'gender' => ['nullable', Rule::in(User::GENDERS)],
-            'phone' => ['nullable', 'string', 'max:32'],
             'city' => ['nullable', 'string', 'max:120'],
             'country' => ['nullable', 'string', 'max:120'],
             'accepts_email' => ['sometimes', 'boolean'],
