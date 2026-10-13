@@ -47,18 +47,6 @@ if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
   php artisan migrate --force --no-interaction
 fi
 
-# Seed the catalogue when the database is empty. This is idempotent — the
-# command checks for existing content first — so a redeploy can never duplicate
-# the programme. Free tiers usually have no shell, so boot is the only reliable
-# place to do this.
-php artisan himam:seed-if-empty --no-interaction
-
-# Force a full re-seed. Deliberate resets only: this WILL duplicate content if
-# the catalogue is already populated.
-if [ "${RUN_SEEDERS:-false}" = "true" ]; then
-  php artisan db:seed --force --no-interaction
-fi
-
 # Uploaded images are served from storage/app/public via this symlink. It lives
 # on the container filesystem, so on an ephemeral host uploads vanish with the
 # instance — point FILESYSTEM_DISK at S3/R2 to keep them.
@@ -67,5 +55,38 @@ php artisan storage:link --force || true
 php artisan config:cache
 php artisan route:cache
 php artisan event:cache
+
+# Seeding happens after the port is open, not before it.
+#
+# Against a remote database the catalogue takes minutes to insert — one network
+# round trip per row — and every second of that used to pass before Apache
+# bound its port. Managed hosts watch for that port and give up waiting: the
+# first TiDB deploy spent seven minutes logging "no open ports detected" and
+# came within moments of being declared a failed deploy.
+#
+# So the order is: schema first, because serving requests against a database
+# with no tables is a guaranteed 500; then the port; then the content. A reader
+# arriving in that window sees an empty catalogue rather than an error, and only
+# on a database that was empty to begin with.
+#
+# `seed-if-empty` checks for existing content, so this can never duplicate the
+# programme on a redeploy.
+seed_in_background() {
+  php artisan himam:seed-if-empty --no-interaction
+
+  # Deliberate resets only: this WILL duplicate content if the catalogue is
+  # already populated.
+  if [ "${RUN_SEEDERS:-false}" = "true" ]; then
+    php artisan db:seed --force --no-interaction
+  fi
+}
+
+if [ "${RUN_SEEDERS_IN_BACKGROUND:-true}" = "true" ]; then
+  seed_in_background &
+else
+  # For a one-shot job, or any host that would rather wait than serve an
+  # empty catalogue.
+  seed_in_background
+fi
 
 exec apache2-foreground
