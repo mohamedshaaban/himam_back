@@ -4,8 +4,24 @@
 # wake. Fine for a demo; if you need it always-on, the same Dockerfile deploys
 # unchanged to Koyeb, which doesn't sleep but asks for a card at signup.
 #
-# Render has no free MySQL, so point the DB_* variables at a free MySQL-
-# compatible provider (TiDB Cloud Serverless, Aiven, Clever Cloud).
+# The database below is the part that matters. Without a real one Laravel falls
+# back to SQLite inside the container, which is wiped on every deploy — new
+# accounts, uploads and admin content all disappear. Render's own free
+# PostgreSQL is provisioned by this file and wired in automatically, so there is
+# nothing to paste. A free MySQL works too (TiDB Cloud, Aiven, Clever Cloud),
+# but means signing up with a second provider and filling the DB_* values by
+# hand.
+
+databases:
+  # Free, and created with the service. Render's free tier expires after 30
+  # days, which is a reminder to move to a paid instance before real readers
+  # depend on it — not a reason to keep running on a filesystem that loses
+  # everything on every deploy.
+  - name: himam-db
+    plan: free
+    region: frankfurt
+    databaseName: himam
+    user: himam
 
 services:
   - type: web
@@ -45,23 +61,35 @@ services:
       # container: ephemeral (wiped on every deploy) and owned by root, so
       # request-time writes fail while boot-time migrations appear to succeed.
       - key: DB_CONNECTION
-        value: mysql
+        value: pgsql
 
       # sync:false means "prompt me in the dashboard" — never commit these.
       - key: APP_URL
         sync: false
       - key: FRONTEND_URL
         sync: false
+      # Filled from the database above, so there is nothing to copy across and
+      # nothing to rotate by hand when the password changes.
       - key: DB_HOST
-        sync: false
+        fromDatabase:
+          name: himam-db
+          property: host
       - key: DB_PORT
-        sync: false
+        fromDatabase:
+          name: himam-db
+          property: port
       - key: DB_DATABASE
-        sync: false
+        fromDatabase:
+          name: himam-db
+          property: database
       - key: DB_USERNAME
-        sync: false
+        fromDatabase:
+          name: himam-db
+          property: user
       - key: DB_PASSWORD
-        sync: false
+        fromDatabase:
+          name: himam-db
+          property: password
 
       # Set to true for the FIRST deploy only, to load the books, quizzes and
       # badges. Leaving it on would re-seed and duplicate the catalogue.

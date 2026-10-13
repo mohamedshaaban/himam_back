@@ -20,9 +20,19 @@ if [ "$DB_CONNECTION" = "sqlite" ]; then
   chmod 775 "$(dirname "$DB_PATH")"
   chmod 664 "$DB_PATH"
 
-  echo "NOTE: running on SQLite inside the container. The filesystem is"
-  echo "      ephemeral, so all data is lost on every deploy and restart."
-  echo "      Set DB_CONNECTION=mysql and the DB_* variables to keep it."
+  echo "============================================================"
+  echo "WARNING: running on SQLite inside the container."
+  echo ""
+  echo "  The container filesystem is ephemeral. EVERY DEPLOY AND"
+  echo "  RESTART DELETES THE DATABASE: accounts readers registered,"
+  echo "  content entered in the dashboard, uploaded files and every"
+  echo "  issued API token. The seeded demo data reappears because it"
+  echo "  is re-created, not because it survived."
+  echo ""
+  echo "  Attach a real database and set DB_CONNECTION to pgsql or"
+  echo "  mysql with the matching DB_* variables. render.yaml"
+  echo "  provisions one and wires it up automatically."
+  echo "============================================================"
 fi
 
 if [ -z "${APP_KEY:-}" ]; then

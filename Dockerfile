@@ -6,12 +6,17 @@
 
 FROM php:8.2-apache
 
-# intl backs locale-aware date formatting; pdo_mysql is the database driver;
-# zip is what Composer uses to unpack packages.
+# intl backs locale-aware date formatting and the localised country list; zip is
+# what Composer uses to unpack packages.
+#
+# Both database drivers ship, because which one is cheapest depends on the host:
+# Render hands out a free PostgreSQL from the same dashboard, while a free MySQL
+# means signing up with a second provider. Carrying both costs a few megabytes
+# and makes moving between them an environment variable rather than a rebuild.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libicu-dev libzip-dev unzip git \
+        libicu-dev libzip-dev libpq-dev unzip git \
     && docker-php-ext-configure intl \
-    && docker-php-ext-install -j"$(nproc)" pdo_mysql intl zip opcache \
+    && docker-php-ext-install -j"$(nproc)" pdo_mysql pdo_pgsql intl zip opcache \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Opcache is off by default in the CLI image and is the single biggest cheap win
