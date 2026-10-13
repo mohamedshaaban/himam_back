@@ -4,13 +4,18 @@
 # wake. Fine for a demo; if you need it always-on, the same Dockerfile deploys
 # unchanged to Koyeb, which doesn't sleep but asks for a card at signup.
 #
-# The database below is the part that matters. Without a real one Laravel falls
-# back to SQLite inside the container, which is wiped on every deploy — new
-# accounts, uploads and admin content all disappear. Render's own free
-# PostgreSQL is provisioned by this file and wired in automatically, so there is
-# nothing to paste. A free MySQL works too (TiDB Cloud, Aiven, Clever Cloud),
-# but means signing up with a second provider and filling the DB_* values by
-# hand.
+# A real database is the part that matters. Without one Laravel falls back to
+# SQLite inside the container, which is wiped on every deploy — new accounts,
+# uploads and admin content all disappear.
+#
+# The live deployment uses TiDB Cloud Serverless (MySQL-compatible, free with no
+# expiry) with the DB_* values set in the dashboard. The PostgreSQL definition
+# below is kept as the alternative: Render's own free tier is provisioned by this
+# file and needs nothing pasted, but it is deleted after 30 days.
+#
+# Applying this Blueprint creates a SECOND service named himam-api with its own
+# URL. The live service is himam-back, configured by hand; the two are not the
+# same thing.
 
 databases:
   # Free, and created with the service. Render's free tier expires after 30
@@ -60,6 +65,8 @@ services:
       # Without this, Laravel falls back to SQLite in a file inside the
       # container: ephemeral (wiped on every deploy) and owned by root, so
       # request-time writes fail while boot-time migrations appear to succeed.
+      # pgsql for the Blueprint's own PostgreSQL. The live himam-back service
+      # overrides this with mysql for TiDB.
       - key: DB_CONNECTION
         value: pgsql
 
