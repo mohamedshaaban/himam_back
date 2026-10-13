@@ -22,6 +22,12 @@ class MediaController extends Controller
 {
     private const DIRECTORY = 'uploads';
 
+    /** Where uploads land — the container filesystem, or object storage. */
+    private function disk(): string
+    {
+        return config('himam.media_disk', 'public');
+    }
+
     /**
      * A URL the browser can actually resolve.
      *
@@ -33,11 +39,11 @@ class MediaController extends Controller
      */
     private function publicUrl(string $path): string
     {
-        if (config('filesystems.disks.public.driver') === 'local') {
+        if (config('filesystems.disks.'.$this->disk().'.driver') === 'local') {
             return '/storage/'.ltrim($path, '/');
         }
 
-        return Storage::disk('public')->url($path);
+        return Storage::disk($this->disk())->url($path);
     }
 
     /**
@@ -46,7 +52,7 @@ class MediaController extends Controller
      */
     public function index(): JsonResponse
     {
-        $disk = Storage::disk('public');
+        $disk = Storage::disk($this->disk());
 
         if (! $disk->exists(self::DIRECTORY)) {
             return response()->json(['data' => []]);
@@ -98,7 +104,7 @@ class MediaController extends Controller
         );
 
         $path = $file->storeAs(self::DIRECTORY, $name, 'public');
-        $disk = Storage::disk('public');
+        $disk = Storage::disk($this->disk());
 
         return response()->json([
             'data' => [
@@ -124,7 +130,7 @@ class MediaController extends Controller
             return response()->json(['message' => __('That file is outside the uploads directory.')], 422);
         }
 
-        Storage::disk('public')->delete($path);
+        Storage::disk($this->disk())->delete($path);
 
         return response()->json(['message' => __('File deleted.')]);
     }

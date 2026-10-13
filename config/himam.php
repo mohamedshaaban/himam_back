@@ -4,6 +4,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Media disk
+    |--------------------------------------------------------------------------
+    |
+    | Where uploads land. The default keeps them on the container filesystem,
+    | which is fine locally and wrong on any host that replaces the container:
+    | the database row survives a deploy, the file does not, and the section
+    | ends up pointing at nothing.
+    |
+    | Set MEDIA_DISK=s3 with the AWS_* variables to use object storage. The S3
+    | driver speaks to any S3-compatible service — Cloudflare R2, Backblaze B2,
+    | MinIO — so AWS_ENDPOINT is usually all that differs.
+    |
+    */
+
+    'media_disk' => env('MEDIA_DISK', 'public'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Supported locales
     |--------------------------------------------------------------------------
     |

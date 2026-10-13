@@ -49,8 +49,14 @@ fi
 
 # Uploaded images are served from storage/app/public via this symlink. It lives
 # on the container filesystem, so on an ephemeral host uploads vanish with the
-# instance — point FILESYSTEM_DISK at S3/R2 to keep them.
+# instance — set MEDIA_DISK=s3 with the AWS_* variables to keep them.
 php artisan storage:link --force || true
+
+# Sections point at the placeholder document by path, and on an ephemeral
+# filesystem that path outlives the file. Re-publishing it costs a 3 KB copy and
+# stops those sections pointing at nothing after a deploy. Real uploads need
+# object storage; this only covers the file that ships with the repository.
+php artisan himam:publish-sample-pdf || true
 
 php artisan config:cache
 php artisan route:cache

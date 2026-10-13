@@ -42,7 +42,7 @@ class ContentSeeder extends Seeder
             return null;
         }
 
-        $disk = \Illuminate\Support\Facades\Storage::disk('public');
+        $disk = \Illuminate\Support\Facades\Storage::disk(config('himam.media_disk', 'public'));
 
         if (! $disk->exists(self::SAMPLE_PDF_PATH)) {
             $disk->put(self::SAMPLE_PDF_PATH, file_get_contents(self::SAMPLE_PDF_SOURCE));
