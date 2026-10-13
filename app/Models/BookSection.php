@@ -12,7 +12,7 @@ class BookSection extends Model
 {
     use HasFactory, HasTranslations;
 
-    protected $fillable = ['book_id', 'title', 'body', 'position'];
+    protected $fillable = ['book_id', 'title', 'body', 'pdf', 'position'];
 
     public array $translatable = ['title', 'body'];
 

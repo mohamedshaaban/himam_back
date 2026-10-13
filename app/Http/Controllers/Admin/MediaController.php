@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
- * Image uploads for covers, badges, slides and rich-text content.
+ * File uploads: images for covers, badges, slides and rich-text content, and
+ * PDFs for section reading material.
  *
  * Files land on the `public` disk, so swapping to S3 or R2 later is a matter of
  * changing FILESYSTEM_DISK — nothing here assumes a local path. That matters
@@ -56,6 +57,9 @@ class MediaController extends Controller
                 'path' => $path,
                 'url' => $this->publicUrl($path),
                 'name' => basename($path),
+                // The picker filters on this: an image field should not offer a
+                // PDF, and a PDF field should not offer a cover image.
+                'kind' => Str::lower(pathinfo($path, PATHINFO_EXTENSION)) === 'pdf' ? 'pdf' : 'image',
                 'size' => $disk->size($path),
                 'modified_at' => $disk->lastModified($path),
             ])
@@ -67,10 +71,18 @@ class MediaController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        // Images and PDFs take different rules. `image` verifies the file really
+        // is an image, which stops a renamed script being uploaded and later
+        // served — but it rejects a PDF, so a PDF is checked by its own mime
+        // type instead. `mimetypes` reads the file's actual content rather than
+        // trusting the extension, so the same protection holds.
+        $isPdf = $request->file('file')?->getClientOriginalExtension() === 'pdf';
+
         $request->validate([
-            // `image` rejects anything the server can't verify as a real image,
-            // which stops a renamed script being uploaded and later served.
-            'file' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,gif,webp,svg', 'max:4096'],
+            'file' => $isPdf
+                // A scanned section runs to a few megabytes; images never do.
+                ? ['required', 'file', 'mimetypes:application/pdf', 'mimes:pdf', 'max:20480']
+                : ['required', 'file', 'image', 'mimes:jpg,jpeg,png,gif,webp,svg', 'max:4096'],
         ]);
 
         $file = $request->file('file');
@@ -80,7 +92,7 @@ class MediaController extends Controller
         // entropy for uniqueness.
         $name = sprintf(
             '%s-%s.%s',
-            Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) ?: 'image',
+            Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME)) ?: 'file',
             Str::lower(Str::random(8)),
             $file->getClientOriginalExtension(),
         );

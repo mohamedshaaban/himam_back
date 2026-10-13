@@ -27,6 +27,7 @@ class SectionController extends Controller
         $data = $request->validate([
             ...$this->translatableRules('title'),
             ...$this->translatableRules('body', false),
+            'pdf' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'integer', 'min:0'],
         ]);
 
@@ -49,6 +50,7 @@ class SectionController extends Controller
         $data = $request->validate([
             ...$this->translatableRules('title', false),
             ...$this->translatableRules('body', false),
+            'pdf' => ['nullable', 'string', 'max:255'],
             'position' => ['nullable', 'integer', 'min:0'],
         ]);
 
