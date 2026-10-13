@@ -17,6 +17,42 @@ class ContentSeeder extends Seeder
 {
     use Translates;
 
+    /**
+     * Placeholder reading material for every section.
+     *
+     * It is copied onto the public disk and referenced the same way a real
+     * upload is, so the reading screen exercises the genuine path rather than a
+     * special case — and replacing it from the dashboard is an ordinary upload.
+     *
+     * Replace it with real material before showing the app to readers.
+     */
+    private const SAMPLE_PDF_SOURCE = __DIR__.'/assets/sample-section.pdf';
+
+    private const SAMPLE_PDF_PATH = 'uploads/sample-section.pdf';
+
+    /**
+     * Puts the placeholder where uploads live, if it is not already there.
+     *
+     * The container filesystem is ephemeral, so this runs on every seed rather
+     * than assuming a previous one left the file behind.
+     */
+    private function samplePdf(): ?string
+    {
+        if (! is_file(self::SAMPLE_PDF_SOURCE)) {
+            return null;
+        }
+
+        $disk = \Illuminate\Support\Facades\Storage::disk('public');
+
+        if (! $disk->exists(self::SAMPLE_PDF_PATH)) {
+            $disk->put(self::SAMPLE_PDF_PATH, file_get_contents(self::SAMPLE_PDF_SOURCE));
+        }
+
+        // The same root-relative form MediaController returns, so the app
+        // resolves it against the API's origin like any other upload.
+        return '/storage/'.self::SAMPLE_PDF_PATH;
+    }
+
     public function run(): void
     {
         $levels = $this->seedLevels();
@@ -185,10 +221,13 @@ class ContentSeeder extends Seeder
             $this->tr('المراجعة والتلخيص', 'Review and Summary', 'Révision et synthèse', 'مراجعہ اور تلخیص'),
         ];
 
+        $pdf = $this->samplePdf();
+
         foreach ($titles as $index => $title) {
             $section = $book->sections()->create([
                 'title' => $title,
                 'body' => $this->sectionBody(),
+                'pdf' => $pdf,
                 'position' => $index + 1,
             ]);
 
