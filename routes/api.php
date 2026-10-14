@@ -69,6 +69,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('progress', Api\ProgressController::class);
 
     Route::get('sections/{section}', [Api\SectionController::class, 'show'])->name('sections.show');
+
+    // Reading is recorded here rather than by the GET above: fetching a section
+    // is something a client may repeat freely, and none of those repeats mean
+    // the reader read it.
+    Route::post('sections/{section}/read', [Api\SectionController::class, 'markRead']);
     Route::get('sections/{section}/quiz', [Api\QuizController::class, 'show']);
     Route::post('sections/{section}/quiz', [Api\QuizController::class, 'submit']);
 

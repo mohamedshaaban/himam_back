@@ -1001,6 +1001,31 @@
           }
         },
         {
+          "name": "Mark a section read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sections/{{sectionId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sections",
+                "{{sectionId}}",
+                "read"
+              ]
+            },
+            "description": "Records that the reader has read the section. Fetching the section with GET no longer does this: a GET is the request a client is most free to repeat — a prefetch, a retry, a cache warm — and none of those mean anyone read anything. Passing the quiz is still what earns the points."
+          },
+          "response": []
+        },
+        {
           "name": "Dashboard",
           "request": {
             "method": "GET",

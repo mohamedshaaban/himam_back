@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Concerns\EnforcesProgramAccess;
 use App\Http\Resources\SectionResource;
 use App\Models\BookSection;
 use App\Services\ProgressService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SectionController extends Controller
@@ -15,6 +16,32 @@ class SectionController extends Controller
 
     public function __construct(private readonly ProgressService $progress)
     {
+    }
+
+    /**
+     * Records that this reader has read the section.
+     *
+     * Separate from fetching it, so the record reflects a decision the app made
+     * rather than a request it happened to repeat. Passing the quiz is still
+     * what earns the points; this only marks it seen.
+     */
+    public function markRead(Request $request, BookSection $section): JsonResponse
+    {
+        abort_unless($section->book->is_published, 404);
+
+        $this->assertCanRead($request, $section->book);
+
+        $user = $request->user();
+
+        $this->progress->markRead($user, $section);
+
+        return response()->json([
+            'data' => [
+                'id' => $section->id,
+                'read' => true,
+                'passed' => in_array($section->id, $user->passedSectionIds(), true),
+            ],
+        ]);
     }
 
     /**
@@ -28,12 +55,15 @@ class SectionController extends Controller
 
         $section->load('book')->loadCount('questions');
 
-        // Opening a section counts as having read it; passing still requires
-        // the quiz.
+        // Reading is recorded by POST /sections/{section}/read, not here. A GET
+        // is the request a client is most free to repeat — a prefetch, a retry,
+        // a cache warm — and none of those mean a reader has read anything.
         if ($user = $request->user()) {
-            $this->progress->markRead($user, $section);
+            $section->readerRead = $user->progress()
+                ->where('book_section_id', $section->id)
+                ->whereNotNull('read_at')
+                ->exists();
 
-            $section->readerRead = true;
             $section->readerPassed = in_array($section->id, $user->passedSectionIds(), true);
         }
 
