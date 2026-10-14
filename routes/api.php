@@ -118,6 +118,11 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::put('sections/{section}', [Admin\SectionController::class, 'update']);
     Route::delete('sections/{section}', [Admin\SectionController::class, 'destroy']);
 
+    // A book examined as a whole carries its own questions; one read in
+    // sections carries them on the sections instead.
+    Route::get('books/{book}/questions', [Admin\QuestionController::class, 'bookIndex']);
+    Route::post('books/{book}/questions', [Admin\QuestionController::class, 'bookStore']);
+
     Route::get('sections/{section}/questions', [Admin\QuestionController::class, 'index']);
     Route::post('sections/{section}/questions', [Admin\QuestionController::class, 'store']);
     Route::put('questions/{question}', [Admin\QuestionController::class, 'update']);

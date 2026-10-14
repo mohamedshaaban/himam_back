@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Admin\Concerns\HandlesTranslatableInput;
 use App\Http\Controllers\Controller;
+use App\Models\Book;
 use App\Models\BookSection;
 use App\Models\Question;
 use Illuminate\Http\JsonResponse;
@@ -33,6 +34,46 @@ class QuestionController extends Controller
             $question = $section->questions()->create([
                 'text' => array_filter($data['text'], fn ($t) => filled($t)),
                 'position' => $data['position'] ?? ($section->questions()->max('position') ?? 0) + 1,
+            ]);
+
+            $this->saveOptions($question, $data['options']);
+
+            return $question;
+        });
+
+        return response()->json(['data' => $question->load('options')], 201);
+    }
+
+    /**
+     * The questions for a book examined as a whole.
+     */
+    public function bookIndex(Book $book): JsonResponse
+    {
+        return response()->json(['data' => $book->questions()->with('options')->get()]);
+    }
+
+    /**
+     * Adds a question to the book itself rather than to one of its sections.
+     *
+     * Refused for a book that has sections: the quiz is either per section or
+     * for the whole book, never both, or the points for finishing the material
+     * would be payable twice and "has this reader finished the book" would have
+     * two answers.
+     */
+    public function bookStore(Request $request, Book $book): JsonResponse
+    {
+        if ($book->sections()->exists()) {
+            throw ValidationException::withMessages([
+                'book' => [__('This book is read in sections, so its quiz belongs to the sections.')],
+            ]);
+        }
+
+        $data = $this->validatePayload($request);
+
+        $question = DB::transaction(function () use ($book, $data) {
+            $question = $book->questions()->create([
+                'text' => array_filter($data['text'], fn ($t) => filled($t)),
+                'position' => $data['position'] ?? ($book->questions()->max('position') ?? 0) + 1,
             ]);
 
             $this->saveOptions($question, $data['options']);
