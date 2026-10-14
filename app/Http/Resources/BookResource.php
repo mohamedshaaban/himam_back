@@ -16,6 +16,11 @@ class BookResource extends JsonResource
             'author' => $this->t('author'),
             'description' => $this->t('description'),
             'cover' => Media::url($this->cover),
+
+            // How this book is read. A client needs to know before it decides
+            // whether to show a sections list or a document and one quiz.
+            'pdf' => Media::url($this->t('pdf')),
+            'has_own_quiz' => $this->questions()->exists(),
             'pages' => $this->pages,
             'points' => $this->points,
             'position' => $this->position,

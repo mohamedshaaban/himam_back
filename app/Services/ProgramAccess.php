@@ -44,6 +44,7 @@ class ProgramAccess
     public function books(Program $program, ?User $user): array
     {
         $passed = $user ? $user->passedSectionIds() : [];
+        $passedBooks = $user ? $user->passedBookIds() : [];
         $books = $program->relationLoaded('books')
             ? $program->books
             : $program->books()->published()->with('sections:id,book_id')->get();
@@ -57,9 +58,12 @@ class ProgramAccess
             $total = $sectionIds->count();
             $done = $sectionIds->intersect($passed)->count();
 
-            // A book with no sections cannot be "completed" by reading, so it
-            // must not become a wall the rest of the programme sits behind.
-            $completed = $total > 0 && $done === $total;
+            // A book with no sections is finished by its own quiz; one with
+            // neither cannot be finished at all, so it must not become a wall
+            // the rest of the programme sits behind.
+            $completed = $total > 0
+                ? $done === $total
+                : in_array($book->id, $passedBooks, true);
 
             // A book the reader has already finished stays open even if the
             // one now before it has not been. Reordering a programme must not

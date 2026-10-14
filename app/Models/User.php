@@ -105,6 +105,21 @@ class User extends Authenticatable
         return $this->belongsToMany(Program::class)->withPivot(['assigned_by', 'assigned_at']);
     }
 
+    /**
+     * Books passed by their own quiz — the books that have no sections.
+     *
+     * Kept beside passedSectionIds() because "finished this book" now has two
+     * shapes, and every rule that counts progress has to accept both.
+     */
+    public function passedBookIds(): array
+    {
+        return $this->progress()
+            ->whereNotNull('book_id')
+            ->whereNotNull('passed_at')
+            ->pluck('book_id')
+            ->all();
+    }
+
     public function passedSectionIds(): array
     {
         return $this->progress()

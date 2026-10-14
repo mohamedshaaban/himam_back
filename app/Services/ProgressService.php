@@ -86,6 +86,94 @@ class ProgressService
     }
 
     /**
+     * Grades the quiz for a whole book.
+     *
+     * The section version in reverse: a book without sections carries one quiz,
+     * so the pass is recorded against the book and the points are credited
+     * once, the first time it is passed. Everything downstream — badges,
+     * certificates, the honour board — reads the same progress table either way.
+     */
+    public function submitBookQuiz(User $user, Book $book, array $answers): array
+    {
+        $questions = $book->questions()->with('options')->get();
+
+        // The answer key is read here, server-side, and never sent to the
+        // client before grading.
+        $key = $questions->mapWithKeys(
+            fn ($question) => [$question->id => $question->correctOption()?->id]
+        );
+
+        $score = $questions->filter(
+            fn ($question) => isset($answers[$question->id])
+                && (int) $answers[$question->id] === $key[$question->id]
+        )->count();
+
+        $total = $questions->count();
+        $passed = $total > 0 && ($score / $total) >= config('himam.quiz_pass_ratio');
+
+        return DB::transaction(function () use ($user, $book, $answers, $score, $total, $passed, $key) {
+            $progress = ReadingProgress::firstOrNew([
+                'user_id' => $user->id,
+                'book_id' => $book->id,
+            ]);
+
+            $alreadyPassed = $progress->exists && $progress->passed_at !== null;
+
+            // A whole book is worth what its sections would have been, so a
+            // book-level pass does not pay less than the same material split up.
+            $pointsAwarded = ($passed && ! $alreadyPassed)
+                ? (int) ($book->points ?: config('himam.section_points'))
+                : 0;
+
+            $attempt = QuizAttempt::create([
+                'user_id' => $user->id,
+                'book_id' => $book->id,
+                'score' => $score,
+                'total' => $total,
+                'passed' => $passed,
+                'points_awarded' => $pointsAwarded,
+                'answers' => $answers,
+            ]);
+
+            $progress->read_at ??= now();
+
+            if ($passed && ! $alreadyPassed) {
+                $progress->passed_at = now();
+            }
+
+            $progress->save();
+
+            if ($pointsAwarded > 0) {
+                $user->increment('points', $pointsAwarded);
+                $user->refresh();
+            }
+
+            return [
+                'attempt' => $attempt,
+                'correct' => $key->filter()->all(),
+                'new_badges' => $this->syncBadges($user),
+                'new_certificates' => $this->issueEarnedCertificates($user),
+            ];
+        });
+    }
+
+    /**
+     * Records that a reader opened a book that has no sections.
+     */
+    public function markBookRead(User $user, Book $book): ReadingProgress
+    {
+        $progress = ReadingProgress::firstOrNew([
+            'user_id' => $user->id,
+            'book_id' => $book->id,
+        ]);
+
+        $progress->read_at ??= now();
+        $progress->save();
+
+        return $progress;
+    }
+
+    /**
      * Records that a reader opened a section, without touching pass state.
      */
     public function markRead(User $user, BookSection $section): ReadingProgress
@@ -141,28 +229,45 @@ class ProgressService
     public function issueEarnedCertificates(User $user): \Illuminate\Support\Collection
     {
         $passedSectionIds = $user->passedSectionIds();
-        $heldLevelIds = $user->certificates()->whereNotNull('level_id')->pluck('level_id')->all();
+        $passedBookIds = $user->passedBookIds();
+        $held = $user->certificates()->whereNotNull('level_id')->get()->keyBy('level_id');
 
         $issued = collect();
 
         $levels = Level::with('books.sections')->where('is_active', true)->get();
 
         foreach ($levels as $level) {
-            if (in_array($level->id, $heldLevelIds, true)) {
-                continue;
-            }
+            $existing = $held->get($level->id);
 
-            $sectionIds = $level->books
-                ->where('is_published', true)
-                ->flatMap->sections
+            $books = $level->books->where('is_published', true);
+            $sectionIds = $books->flatMap->sections->pluck('id');
+
+            // Books examined as a whole have no sections to count, so they are
+            // checked separately — a level may hold both kinds.
+            $wholeBookIds = $books->filter(fn (Book $book) => $book->sections->isEmpty())
                 ->pluck('id');
 
             // A level with no content yet must not hand out certificates.
-            if ($sectionIds->isEmpty()) {
+            if ($sectionIds->isEmpty() && $wholeBookIds->isEmpty()) {
                 continue;
             }
 
             if ($sectionIds->diff($passedSectionIds)->isNotEmpty()) {
+                continue;
+            }
+
+            if ($wholeBookIds->diff($passedBookIds)->isNotEmpty()) {
+                continue;
+            }
+
+            // A reader who retakes the quiz and passes again gets the same
+            // certificate re-dated, not a new one. The serial and verification
+            // code are printed on copies and shared with people who are not
+            // readers of this app, and a reissue would quietly stop every one
+            // of them verifying.
+            if ($existing) {
+                $existing->forceFill(['issued_at' => now()])->save();
+
                 continue;
             }
 
@@ -191,13 +296,15 @@ class ProgressService
     public function stats(User $user): array
     {
         $passedSectionIds = $user->passedSectionIds();
+        $passedBookIds = $user->passedBookIds();
 
         $booksCompleted = Book::published()
             ->withCount('sections')
             ->get()
-            ->filter(function (Book $book) use ($passedSectionIds) {
+            ->filter(function (Book $book) use ($passedSectionIds, $passedBookIds) {
+                // A book with no sections is finished by its own quiz.
                 if ($book->sections_count === 0) {
-                    return false;
+                    return in_array($book->id, $passedBookIds, true);
                 }
 
                 $sectionIds = $book->sections()->pluck('id');

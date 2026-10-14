@@ -31,11 +31,13 @@ class QuizController extends Controller
 
         $questions = $section->questions()->with('options')->get();
 
-        $lastAttempt = $request->user()
+        $attempts = $request->user()
             ?->quizAttempts()
             ->where('book_section_id', $section->id)
             ->latest()
-            ->first();
+            ->get() ?? collect();
+
+        $lastAttempt = $attempts->first();
 
         return response()->json([
             'data' => QuestionResource::collection($questions),
@@ -50,6 +52,15 @@ class QuizController extends Controller
                     'title' => $section->book->t('title'),
                 ],
                 'pass_ratio' => (float) config('himam.quiz_pass_ratio'),
+
+                // Whether this reader has sat the quiz, so the screen can say
+                // "retake" rather than "start" without inferring it from a
+                // nullable attempt object.
+                'taken' => $attempts->isNotEmpty(),
+                'attempts' => $attempts->count(),
+                'passed' => $attempts->contains('passed', true),
+                'best_score' => $attempts->max('score'),
+
                 'last_attempt' => $lastAttempt ? [
                     'score' => $lastAttempt->score,
                     'total' => $lastAttempt->total,

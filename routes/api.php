@@ -74,6 +74,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // is something a client may repeat freely, and none of those repeats mean
     // the reader read it.
     Route::post('sections/{section}/read', [Api\SectionController::class, 'markRead']);
+    // A book without sections is read and examined as a whole.
+    Route::post('books/{book}/read', [Api\BookQuizController::class, 'markRead']);
+    Route::get('books/{book}/quiz', [Api\BookQuizController::class, 'show']);
+    Route::post('books/{book}/quiz', [Api\BookQuizController::class, 'submit']);
+
     Route::get('sections/{section}/quiz', [Api\QuizController::class, 'show']);
     Route::post('sections/{section}/quiz', [Api\QuizController::class, 'submit']);
 

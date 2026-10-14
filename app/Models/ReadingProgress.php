@@ -12,7 +12,7 @@ class ReadingProgress extends Model
 
     protected $table = 'reading_progress';
 
-    protected $fillable = ['user_id', 'book_section_id', 'read_at', 'passed_at'];
+    protected $fillable = ['user_id', 'book_section_id', 'book_id', 'read_at', 'passed_at'];
 
     protected function casts(): array
     {

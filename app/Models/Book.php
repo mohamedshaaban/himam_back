@@ -16,10 +16,10 @@ class Book extends Model
 
     protected $fillable = [
         'level_id', 'title', 'author', 'description',
-        'cover', 'pages', 'points', 'position', 'is_published',
+        'cover', 'pdf', 'pages', 'points', 'position', 'is_published',
     ];
 
-    public array $translatable = ['title', 'author', 'description'];
+    public array $translatable = ['title', 'author', 'description', 'pdf'];
 
     protected function casts(): array
     {
@@ -27,6 +27,7 @@ class Book extends Model
             'title' => 'array',
             'author' => 'array',
             'description' => 'array',
+            'pdf' => 'array',
             'pages' => 'integer',
             'points' => 'integer',
             'is_published' => 'boolean',
@@ -46,6 +47,23 @@ class Book extends Model
     public function sections(): HasMany
     {
         return $this->hasMany(BookSection::class)->orderBy('position');
+    }
+
+    /**
+     * Questions for the book as a whole.
+     *
+     * Only a book without sections has these: the quiz is either per section or
+     * for the whole book, never both, so that the points for finishing it are
+     * awarded once and in one place.
+     */
+    public function questions(): HasMany
+    {
+        return $this->hasMany(Question::class)->orderBy('position');
+    }
+
+    public function hasOwnQuiz(): bool
+    {
+        return $this->questions()->exists();
     }
 
     /** The reading programmes this book appears in, if any. */

@@ -63,6 +63,7 @@ class BookController extends Controller
         }
 
         $passed = $user->passedSectionIds();
+        $passedBooks = $user->passedBookIds();
 
         foreach ($books as $book) {
             $sectionIds = $book->relationLoaded('sections')
@@ -72,10 +73,15 @@ class BookController extends Controller
             $done = $sectionIds->intersect($passed)->count();
             $total = $sectionIds->count();
 
+            // A book with no sections is finished by its own quiz instead.
+            $completed = $total > 0
+                ? $done === $total
+                : in_array($book->id, $passedBooks, true);
+
             $book->readerProgress = [
                 'sections_passed' => $done,
                 'sections_total' => $total,
-                'completed' => $total > 0 && $done === $total,
+                'completed' => $completed,
                 'percent' => $total > 0 ? (int) round($done / $total * 100) : 0,
             ];
         }

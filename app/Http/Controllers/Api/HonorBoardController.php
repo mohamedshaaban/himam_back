@@ -58,14 +58,20 @@ class HonorBoardController extends Controller
     private function booksCompleted(User $user): int
     {
         $passed = $user->passedSectionIds();
+        $passedBooks = $user->passedBookIds();
 
         return \App\Models\Book::published()
             ->with('sections:id,book_id')
             ->get()
-            ->filter(function ($book) use ($passed) {
+            ->filter(function ($book) use ($passed, $passedBooks) {
                 $ids = $book->sections->pluck('id');
 
-                return $ids->isNotEmpty() && $ids->diff($passed)->isEmpty();
+                // Sectionless books are finished by their own quiz.
+                if ($ids->isEmpty()) {
+                    return in_array($book->id, $passedBooks, true);
+                }
+
+                return $ids->diff($passed)->isEmpty();
             })
             ->count();
     }

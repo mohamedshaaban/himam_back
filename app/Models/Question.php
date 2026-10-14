@@ -12,7 +12,7 @@ class Question extends Model
 {
     use HasFactory, HasTranslations;
 
-    protected $fillable = ['book_section_id', 'text', 'position'];
+    protected $fillable = ['book_section_id', 'book_id', 'text', 'position'];
 
     public array $translatable = ['text'];
 
