@@ -25,7 +25,7 @@ class ProgressService
      * Grades a submitted attempt and applies every consequence of it.
      *
      * @param  array<int,int>  $answers  question id => chosen option id
-     * @return array{attempt: QuizAttempt, correct: array<int,int>, new_badges: \Illuminate\Support\Collection, new_certificates: \Illuminate\Support\Collection}
+     * @return array{attempt: QuizAttempt, correct: array<int,int>, incorrect: array<int,int>, new_badges: \Illuminate\Support\Collection, new_certificates: \Illuminate\Support\Collection}
      */
     public function submitQuiz(User $user, BookSection $section, array $answers): array
     {
@@ -37,15 +37,24 @@ class ProgressService
             fn ($question) => [$question->id => $question->correctOption()?->id]
         );
 
-        $score = $questions->filter(
+        $right = $questions->filter(
             fn ($question) => isset($answers[$question->id])
                 && (int) $answers[$question->id] === $key[$question->id]
-        )->count();
+        );
+
+        $score = $right->count();
+
+        // Named so a failed attempt can be shown what to go back and read,
+        // without being shown the answers.
+        $incorrect = $questions->whereNotIn('id', $right->pluck('id'))
+            ->pluck('id')
+            ->values()
+            ->all();
 
         $total = $questions->count();
         $passed = $total > 0 && ($score / $total) >= config('himam.quiz_pass_ratio');
 
-        return DB::transaction(function () use ($user, $section, $answers, $score, $total, $passed, $key) {
+        return DB::transaction(function () use ($user, $section, $answers, $score, $total, $passed, $key, $incorrect) {
             $progress = ReadingProgress::firstOrNew([
                 'user_id' => $user->id,
                 'book_section_id' => $section->id,
@@ -80,6 +89,7 @@ class ProgressService
             return [
                 'attempt' => $attempt,
                 'correct' => $key->filter()->all(),
+                'incorrect' => $incorrect,
                 'new_badges' => $this->syncBadges($user),
                 'new_certificates' => $this->issueEarnedCertificates($user),
             ];
@@ -104,15 +114,24 @@ class ProgressService
             fn ($question) => [$question->id => $question->correctOption()?->id]
         );
 
-        $score = $questions->filter(
+        $right = $questions->filter(
             fn ($question) => isset($answers[$question->id])
                 && (int) $answers[$question->id] === $key[$question->id]
-        )->count();
+        );
+
+        $score = $right->count();
+
+        // Named so a failed attempt can be shown what to go back and read,
+        // without being shown the answers.
+        $incorrect = $questions->whereNotIn('id', $right->pluck('id'))
+            ->pluck('id')
+            ->values()
+            ->all();
 
         $total = $questions->count();
         $passed = $total > 0 && ($score / $total) >= config('himam.quiz_pass_ratio');
 
-        return DB::transaction(function () use ($user, $book, $answers, $score, $total, $passed, $key) {
+        return DB::transaction(function () use ($user, $book, $answers, $score, $total, $passed, $key, $incorrect) {
             $progress = ReadingProgress::firstOrNew([
                 'user_id' => $user->id,
                 'book_id' => $book->id,
@@ -152,6 +171,7 @@ class ProgressService
             return [
                 'attempt' => $attempt,
                 'correct' => $key->filter()->all(),
+                'incorrect' => $incorrect,
                 'new_badges' => $this->syncBadges($user),
                 'new_certificates' => $this->issueEarnedCertificates($user),
             ];
@@ -352,14 +372,16 @@ class ProgressService
             ],
             'title' => [
                 'ar' => "حصلت على وسام {$name['ar']}",
-                'en' => "You earned the {$name['en']} badge",
-                'fr' => "Vous avez obtenu le badge {$name['fr']}",
+                // No article before the name: badge names carry their own
+                // ("The Persistent"), and the two together read as a stutter.
+                'en' => "New badge: {$name['en']}",
+                'fr' => "Nouveau badge : {$name['fr']}",
                 'ur' => "آپ نے {$name['ur']} اعزاز حاصل کیا",
             ],
             'body' => [
                 'ar' => "تهانينا، أضيف وسام «{$name['ar']}» إلى أوسمتك.",
-                'en' => "Congratulations — the “{$name['en']}” badge has been added to your collection.",
-                'fr' => "Félicitations — le badge « {$name['fr']} » a été ajouté à votre collection.",
+                'en' => "Congratulations — “{$name['en']}” has been added to your badges.",
+                'fr' => "Félicitations — « {$name['fr']} » a été ajouté à vos badges.",
                 'ur' => "مبارک ہو، ”{$name['ur']}“ اعزاز آپ کے اعزازات میں شامل ہو گیا۔",
             ],
         ]);

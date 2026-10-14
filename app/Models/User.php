@@ -122,7 +122,12 @@ class User extends Authenticatable
 
     public function passedSectionIds(): array
     {
+        // A progress row keyed on a book rather than a section has no section
+        // id, and without this filter its null came back as a "passed section":
+        // the counter on the home screen ran ahead, and a badge for passing
+        // one's first section was awarded for passing a whole book.
         return $this->progress()
+            ->whereNotNull('book_section_id')
             ->whereNotNull('passed_at')
             ->pluck('book_section_id')
             ->all();

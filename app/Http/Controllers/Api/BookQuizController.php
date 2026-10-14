@@ -99,9 +99,14 @@ class BookQuizController extends Controller
             'passed' => $attempt->passed,
             'points_awarded' => $attempt->points_awarded,
 
-            // The key goes out only after grading, so the reader can see what
-            // they got wrong without it having been available before.
-            'correct_options' => $result['correct'],
+            // The key is revealed only to a reader who passed. A resit is free
+            // and unlimited, so handing back the answers after a failure would
+            // turn the first attempt into a way of being told them — and the
+            // second into a formality. A failed attempt gets the questions it
+            // got wrong instead, which is what a reader needs to know to go
+            // back and read again.
+            'correct_options' => $attempt->passed ? $result['correct'] : null,
+            'incorrect_questions' => $attempt->passed ? [] : $result['incorrect'],
             'new_badges' => BadgeResource::collection($result['new_badges']),
             'new_certificates' => CertificateResource::collection($result['new_certificates']),
             'stats' => $this->progress->stats($request->user()->refresh()),
