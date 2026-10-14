@@ -14,13 +14,14 @@ class BookSection extends Model
 
     protected $fillable = ['book_id', 'title', 'body', 'pdf', 'position'];
 
-    public array $translatable = ['title', 'body'];
+    public array $translatable = ['title', 'body', 'pdf'];
 
     protected function casts(): array
     {
         return [
             'title' => 'array',
             'body' => 'array',
+            'pdf' => 'array',
         ];
     }
 

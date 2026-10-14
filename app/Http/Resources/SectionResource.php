@@ -23,7 +23,7 @@ class SectionResource extends JsonResource
 
             // Sent with the list too: the book screen can mark which sections
             // are a document before the reader opens one.
-            'pdf' => Media::url($this->pdf),
+            'pdf' => Media::url($this->t('pdf')),
 
             'read' => $this->when(isset($this->readerRead), fn () => (bool) $this->readerRead),
             'passed' => $this->when(isset($this->readerPassed), fn () => (bool) $this->readerPassed),

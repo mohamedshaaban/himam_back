@@ -36,7 +36,7 @@ class ContentSeeder extends Seeder
      * The container filesystem is ephemeral, so this runs on every seed rather
      * than assuming a previous one left the file behind.
      */
-    private function samplePdf(): ?string
+    private function samplePdf(): ?array
     {
         if (! is_file(self::SAMPLE_PDF_SOURCE)) {
             return null;
@@ -50,7 +50,13 @@ class ContentSeeder extends Seeder
 
         // The same root-relative form MediaController returns, so the app
         // resolves it against the API's origin like any other upload.
-        return '/storage/'.self::SAMPLE_PDF_PATH;
+        //
+        // The placeholder is the same file in every language: it exists to show
+        // the screen working, and a reader switching language should still see
+        // a document rather than an empty frame.
+        $path = '/storage/'.self::SAMPLE_PDF_PATH;
+
+        return $this->tr($path, $path, $path, $path);
     }
 
     public function run(): void

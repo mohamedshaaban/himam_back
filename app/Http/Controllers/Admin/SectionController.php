@@ -27,7 +27,7 @@ class SectionController extends Controller
         $data = $request->validate([
             ...$this->translatableRules('title'),
             ...$this->translatableRules('body', false),
-            'pdf' => ['nullable', 'string', 'max:255'],
+            ...$this->translatableRules('pdf', false),
             'position' => ['nullable', 'integer', 'min:0'],
         ]);
 
@@ -35,7 +35,7 @@ class SectionController extends Controller
         // to think about the position field.
         $data['position'] ??= ($book->sections()->max('position') ?? 0) + 1;
 
-        $section = $book->sections()->create($this->cleanTranslations($data, 'title', 'body'));
+        $section = $book->sections()->create($this->cleanTranslations($data, 'title', 'body', 'pdf'));
 
         return response()->json(['data' => $section], 201);
     }
@@ -50,11 +50,11 @@ class SectionController extends Controller
         $data = $request->validate([
             ...$this->translatableRules('title', false),
             ...$this->translatableRules('body', false),
-            'pdf' => ['nullable', 'string', 'max:255'],
+            ...$this->translatableRules('pdf', false),
             'position' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $section->update($this->cleanTranslations($data, 'title', 'body'));
+        $section->update($this->cleanTranslations($data, 'title', 'body', 'pdf'));
 
         return response()->json(['data' => $section->fresh()]);
     }
