@@ -573,11 +573,11 @@ Content-Type: application/json
   ],
   "new_certificates": [
     {
-      "id": 39,
-      "serial": "CERT-2026-VNLD8D",
+      "id": 41,
+      "serial": "CERT-2026-59YYKL",
       "title": "A book without sections",
       "issued_at": "2026-10-14",
-      "verification_url": "http://127.0.0.1:8000/api/certificates/verify/dd671d21-1597-47e3-b2cb-35fe7a221067"
+      "verification_url": "http://127.0.0.1:8000/api/certificates/verify/76f5b1c3-df05-42b3-b87c-36c8cf5b8057"
     }
   ],
   "stats": {
@@ -710,33 +710,33 @@ Authorization: Bearer <token>
 {
   "data": [
     {
-      "id": 99,
+      "id": 104,
       "tag": "Badge",
       "title": "New badge: The Persistent",
       "body": "Congratulations — “The Persistent” has been added to your badges.",
       "image": "http://127.0.0.1:8000/assets/badge.png",
       "category": "badge",
-      "published_at": "2026-10-14T17:40:14+00:00",
+      "published_at": "2026-10-14T17:48:01+00:00",
       "read": false
     },
     {
-      "id": 97,
+      "id": 102,
       "tag": "Badge",
       "title": "New badge: Book Finisher",
       "body": "Congratulations — “Book Finisher” has been added to your badges.",
       "image": "http://127.0.0.1:8000/assets/badge.png",
       "category": "badge",
-      "published_at": "2026-10-14T17:40:09+00:00",
+      "published_at": "2026-10-14T17:47:56+00:00",
       "read": false
     },
     {
-      "id": 98,
+      "id": 103,
       "tag": "Certificate",
       "title": "Your certificate for “A book without sections” has been issued",
-      "body": "Congratulations — your certificate for “A book without sections” has been issued with serial CERT-2026-VNLD8D. You will find it on the certificates page.",
+      "body": "Congratulations — your certificate for “A book without sections” has been issued with serial CERT-2026-59YYKL. You will find it on the certificates page.",
       "image": null,
       "category": "certificate",
-      "published_at": "2026-10-14T17:40:09+00:00",
+      "published_at": "2026-10-14T17:47:56+00:00",
       "read": false
     },
     {
@@ -794,8 +794,8 @@ Authorization: Bearer <token>
 {
   "data": [
     {
-      "id": 39,
-      "serial": "CERT-2026-VNLD8D",
+      "id": 41,
+      "serial": "CERT-2026-59YYKL",
       "title": "A book without sections",
       "issued_at": "2026-10-14",
       "level": null,
@@ -815,7 +815,7 @@ Authorization: Bearer <token>
         "points": 500,
         "position": 99
       },
-      "verification_url": "http://127.0.0.1:8000/api/certificates/verify/dd671d21-1597-47e3-b2cb-35fe7a221067"
+      "verification_url": "http://127.0.0.1:8000/api/certificates/verify/76f5b1c3-df05-42b3-b87c-36c8cf5b8057"
     }
   ]
 }
