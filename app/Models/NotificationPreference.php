@@ -21,7 +21,11 @@ class NotificationPreference extends Model
      * The categories a reader can mute, in the order the account screen shows
      * them. Kept here so the API and the seeder agree on one list.
      */
-    public const CATEGORIES = ['program', 'exam', 'results', 'honor', 'general'];
+    // 'certificate' and 'badge' are listed here as well as in the admin's own
+    // set, so a reader can mute the automatic notices like any other kind.
+    // The feed filters on these; a category absent from the list can never be
+    // turned off.
+    public const CATEGORIES = ['program', 'exam', 'results', 'honor', 'certificate', 'badge', 'general'];
 
     public function user(): BelongsTo
     {

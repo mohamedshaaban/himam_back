@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Announcement;
 use App\Models\Badge;
 use App\Models\Book;
 use App\Models\BookSection;
@@ -217,22 +218,29 @@ class ProgressService
 
         foreach ($newlyEarned as $badge) {
             $user->badges()->attach($badge->id, ['awarded_at' => now()]);
+            $this->announceBadge($user, $badge);
         }
 
         return $newlyEarned->values();
     }
 
     /**
-     * Issues a certificate for every level whose books this reader has fully
-     * passed and that they don't already hold one for.
+     * Issues every certificate this reader has now earned and does not hold.
+     *
+     * Two kinds, and a reader finishing the last book of a level earns both:
+     * one for the book, awarded the moment its exam is passed, and one for the
+     * level, awarded when every book in it is done. The book certificate is
+     * what the programme promises on finishing a single book; the level one
+     * stays as the larger milestone above it.
      */
     public function issueEarnedCertificates(User $user): \Illuminate\Support\Collection
     {
         $passedSectionIds = $user->passedSectionIds();
         $passedBookIds = $user->passedBookIds();
-        $held = $user->certificates()->whereNotNull('level_id')->get()->keyBy('level_id');
 
-        $issued = collect();
+        $issued = $this->issueBookCertificates($user, $passedSectionIds, $passedBookIds);
+
+        $held = $user->certificates()->whereNotNull('level_id')->get()->keyBy('level_id');
 
         $levels = Level::with('books.sections')->where('is_active', true)->get();
 
@@ -277,9 +285,158 @@ class ProgressService
         return $issued;
     }
 
+    /**
+     * A certificate per book this reader has finished.
+     *
+     * "Finished" means what it means everywhere else in the app: every section
+     * passed, or — for a book examined as a whole — its own quiz passed. A book
+     * with neither sections nor questions cannot be finished, so it never
+     * issues one.
+     *
+     * @param  array<int,int>  $passedSectionIds
+     * @param  array<int,int>  $passedBookIds
+     * @return \Illuminate\Support\Collection<int, Certificate>
+     */
+    private function issueBookCertificates(User $user, array $passedSectionIds, array $passedBookIds): \Illuminate\Support\Collection
+    {
+        $held = $user->certificates()->whereNotNull('book_id')->get()->keyBy('book_id');
+
+        $issued = collect();
+
+        foreach (Book::published()->with('sections:id,book_id')->get() as $book) {
+            $sectionIds = $book->sections->pluck('id');
+
+            $completed = $sectionIds->isNotEmpty()
+                ? $sectionIds->diff($passedSectionIds)->isEmpty()
+                : in_array($book->id, $passedBookIds, true);
+
+            if (! $completed) {
+                continue;
+            }
+
+            // As with levels: a retake re-dates the certificate rather than
+            // replacing it, so a serial already shared with someone outside the
+            // app keeps verifying.
+            if ($existing = $held->get($book->id)) {
+                $existing->forceFill(['issued_at' => now()])->save();
+
+                continue;
+            }
+
+            $issued->push($this->issueCertificate($user, null, $book));
+        }
+
+        return $issued;
+    }
+
+    /**
+     * Tells the reader they have earned a badge.
+     *
+     * The same inbox as the certificate notice, for the same reasons, and muted
+     * by the same preference machinery.
+     */
+    private function announceBadge(User $user, Badge $badge): void
+    {
+        $name = $this->perLocale($badge->name);
+
+        Announcement::create([
+            'user_id' => $user->id,
+            'category' => 'badge',
+            'image' => $badge->image,
+            'published_at' => now(),
+            'tag' => [
+                'ar' => 'وسام',
+                'en' => 'Badge',
+                'fr' => 'Badge',
+                'ur' => 'اعزاز',
+            ],
+            'title' => [
+                'ar' => "حصلت على وسام {$name['ar']}",
+                'en' => "You earned the {$name['en']} badge",
+                'fr' => "Vous avez obtenu le badge {$name['fr']}",
+                'ur' => "آپ نے {$name['ur']} اعزاز حاصل کیا",
+            ],
+            'body' => [
+                'ar' => "تهانينا، أضيف وسام «{$name['ar']}» إلى أوسمتك.",
+                'en' => "Congratulations — the “{$name['en']}” badge has been added to your collection.",
+                'fr' => "Félicitations — le badge « {$name['fr']} » a été ajouté à votre collection.",
+                'ur' => "مبارک ہو، ”{$name['ur']}“ اعزاز آپ کے اعزازات میں شامل ہو گیا۔",
+            ],
+        ]);
+    }
+
+    /**
+     * Reads a translatable attribute as one string per shipped locale, so a
+     * notification can be written in all of them at once.
+     *
+     * A language the record is missing falls back to one it has, rather than
+     * leaving a hole in the middle of the sentence.
+     *
+     * @return array<string,string>
+     */
+    private function perLocale(mixed $value): array
+    {
+        $values = is_array($value)
+            ? array_filter($value, fn ($text) => filled($text))
+            : array_filter(['en' => $value], fn ($text) => filled($text));
+
+        $fallback = $values[config('app.fallback_locale')] ?? (reset($values) ?: '');
+
+        return [
+            'ar' => $values['ar'] ?? $fallback,
+            'en' => $values['en'] ?? $fallback,
+            'fr' => $values['fr'] ?? $fallback,
+            'ur' => $values['ur'] ?? $fallback,
+        ];
+    }
+
+    /**
+     * Tells the reader a certificate has been issued to them.
+     *
+     * Written as a targeted announcement rather than a separate notification
+     * system: it is the same inbox the reader already has, it carries the
+     * unread count on the bell, and a reader who has muted the certificate
+     * category is respected without any extra work here — the feed filters on
+     * that already.
+     *
+     * Only on a new certificate. Re-dating one after a retake is not news.
+     */
+    private function announceCertificate(User $user, Certificate $certificate): void
+    {
+        // The subject is named in the notice itself: a reader finishing the last
+        // book of a level receives two certificates at once, and "your
+        // certificate has been issued" twice over says nothing about which.
+        $subject = $this->perLocale($certificate->title);
+        $serial = $certificate->serial;
+
+        Announcement::create([
+            'user_id' => $user->id,
+            'category' => 'certificate',
+            'published_at' => now(),
+            'tag' => [
+                'ar' => 'شهادة',
+                'en' => 'Certificate',
+                'fr' => 'Certificat',
+                'ur' => 'سند',
+            ],
+            'title' => [
+                'ar' => "صدرت شهادتك في «{$subject['ar']}»",
+                'en' => "Your certificate for “{$subject['en']}” has been issued",
+                'fr' => "Votre certificat pour « {$subject['fr']} » a été émis",
+                'ur' => "”{$subject['ur']}“ کی آپ کی سند جاری ہو گئی",
+            ],
+            'body' => [
+                'ar' => "تهانينا، صدرت شهادتك في «{$subject['ar']}» برقم {$serial}. تجدها في صفحة الشهادات.",
+                'en' => "Congratulations — your certificate for “{$subject['en']}” has been issued with serial {$serial}. You will find it on the certificates page.",
+                'fr' => "Félicitations — votre certificat pour « {$subject['fr']} » a été émis sous le numéro {$serial}. Vous le trouverez sur la page des certificats.",
+                'ur' => "مبارک ہو، ”{$subject['ur']}“ کی آپ کی سند نمبر {$serial} جاری ہو گئی۔ یہ اسناد کے صفحے پر ملے گی۔",
+            ],
+        ]);
+    }
+
     public function issueCertificate(User $user, ?Level $level = null, ?Book $book = null): Certificate
     {
-        return Certificate::create([
+        $certificate = Certificate::create([
             'user_id' => $user->id,
             'level_id' => $level?->id,
             'book_id' => $book?->id,
@@ -288,6 +445,10 @@ class ProgressService
             'title' => $level?->name ?? $book?->title,
             'issued_at' => now(),
         ]);
+
+        $this->announceCertificate($user, $certificate);
+
+        return $certificate;
     }
 
     /**

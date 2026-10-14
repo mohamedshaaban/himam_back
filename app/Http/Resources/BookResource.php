@@ -21,6 +21,11 @@ class BookResource extends JsonResource
             // whether to show a sections list or a document and one quiz.
             'pdf' => Media::url($this->t('pdf')),
             'has_own_quiz' => $this->questions()->exists(),
+
+            // Whether to offer the exam, and what the button says, are set in
+            // the dashboard — the client renders what it is told rather than
+            // deciding for itself.
+            'quiz_button' => $this->quizButton(),
             'pages' => $this->pages,
             'points' => $this->points,
             'position' => $this->position,

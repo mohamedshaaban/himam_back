@@ -13,7 +13,15 @@ class AnnouncementController extends Controller
 {
     use HandlesTranslatableInput;
 
-    private const CATEGORIES = ['general', 'program', 'exam', 'results', 'honor', 'certificate'];
+    /**
+     * One list, shared with the reader's mute preferences.
+     *
+     * These were two constants that had already drifted apart: a category the
+     * dashboard could post but the reader could not mute would have been
+     * unmutable, and one the reader could mute but nothing could post would
+     * have sat dead in the account screen.
+     */
+    private const CATEGORIES = \App\Models\NotificationPreference::CATEGORIES;
 
     public function index(): JsonResponse
     {

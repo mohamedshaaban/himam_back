@@ -55,6 +55,7 @@ class BookQuizController extends Controller
                 'book' => ['id' => $book->id, 'title' => $book->t('title')],
                 'questions_total' => $questions->count(),
                 'pass_ratio' => (float) config('himam.quiz_pass_ratio'),
+                'quiz_button' => $book->quizButton(),
 
                 // Same shape the section quiz reports, so a client does not
                 // need two readings of "has this been taken".
@@ -89,20 +90,21 @@ class BookQuizController extends Controller
 
         $attempt = $result['attempt'];
 
+        // Deliberately the same flat shape the section quiz returns: one quiz
+        // screen submits to either endpoint, and an envelope here but not there
+        // would make it read the result two different ways for no reason.
         return response()->json([
-            'data' => [
-                'score' => $attempt->score,
-                'total' => $attempt->total,
-                'passed' => $attempt->passed,
-                'points_awarded' => $attempt->points_awarded,
-                // The key goes out only after grading, so the reader can see
-                // what they got wrong without it having been available before.
-                'correct' => $result['correct'],
-            ],
-            'meta' => [
-                'new_badges' => BadgeResource::collection($result['new_badges'])->resolve(),
-                'new_certificates' => CertificateResource::collection($result['new_certificates'])->resolve(),
-            ],
+            'score' => $attempt->score,
+            'total' => $attempt->total,
+            'passed' => $attempt->passed,
+            'points_awarded' => $attempt->points_awarded,
+
+            // The key goes out only after grading, so the reader can see what
+            // they got wrong without it having been available before.
+            'correct_options' => $result['correct'],
+            'new_badges' => BadgeResource::collection($result['new_badges']),
+            'new_certificates' => CertificateResource::collection($result['new_certificates']),
+            'stats' => $this->progress->stats($request->user()->refresh()),
         ]);
     }
 

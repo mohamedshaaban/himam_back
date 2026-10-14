@@ -32,14 +32,19 @@ class BookController extends Controller
             ...$this->translatableRules('title'),
             ...$this->translatableRules('author', false),
             ...$this->translatableRules('description', false),
+            ...$this->translatableRules('pdf', false),
+            ...$this->translatableRules('quiz_button_label', false),
             'cover' => ['nullable', 'string', 'max:255'],
             'pages' => ['nullable', 'integer', 'min:0'],
             'points' => ['nullable', 'integer', 'min:0'],
             'position' => ['nullable', 'integer', 'min:0'],
             'is_published' => ['nullable', 'boolean'],
+            'quiz_button_visible' => ['nullable', 'boolean'],
         ]);
 
-        $book = Book::create($this->cleanTranslations($data, 'title', 'author', 'description'));
+        $book = Book::create($this->cleanTranslations(
+            $data, 'title', 'author', 'description', 'pdf', 'quiz_button_label'
+        ));
 
         return response()->json(['data' => $book->load('level')], 201);
     }
@@ -47,7 +52,7 @@ class BookController extends Controller
     public function show(Book $book): JsonResponse
     {
         return response()->json([
-            'data' => $book->load(['level', 'sections.questions.options']),
+            'data' => $book->load(['level', 'sections.questions.options', 'questions.options']),
         ]);
     }
 
@@ -58,14 +63,19 @@ class BookController extends Controller
             ...$this->translatableRules('title', false),
             ...$this->translatableRules('author', false),
             ...$this->translatableRules('description', false),
+            ...$this->translatableRules('pdf', false),
+            ...$this->translatableRules('quiz_button_label', false),
             'cover' => ['nullable', 'string', 'max:255'],
             'pages' => ['nullable', 'integer', 'min:0'],
             'points' => ['nullable', 'integer', 'min:0'],
             'position' => ['nullable', 'integer', 'min:0'],
             'is_published' => ['nullable', 'boolean'],
+            'quiz_button_visible' => ['nullable', 'boolean'],
         ]);
 
-        $book->update($this->cleanTranslations($data, 'title', 'author', 'description'));
+        $book->update($this->cleanTranslations(
+            $data, 'title', 'author', 'description', 'pdf', 'quiz_button_label'
+        ));
 
         return response()->json(['data' => $book->fresh()->load('level')]);
     }

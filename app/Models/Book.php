@@ -17,9 +17,10 @@ class Book extends Model
     protected $fillable = [
         'level_id', 'title', 'author', 'description',
         'cover', 'pdf', 'pages', 'points', 'position', 'is_published',
+        'quiz_button_visible', 'quiz_button_label',
     ];
 
-    public array $translatable = ['title', 'author', 'description', 'pdf'];
+    public array $translatable = ['title', 'author', 'description', 'pdf', 'quiz_button_label'];
 
     protected function casts(): array
     {
@@ -28,6 +29,8 @@ class Book extends Model
             'author' => 'array',
             'description' => 'array',
             'pdf' => 'array',
+            'quiz_button_label' => 'array',
+            'quiz_button_visible' => 'boolean',
             'pages' => 'integer',
             'points' => 'integer',
             'is_published' => 'boolean',
@@ -64,6 +67,26 @@ class Book extends Model
     public function hasOwnQuiz(): bool
     {
         return $this->questions()->exists();
+    }
+
+    /**
+     * How the quiz button should be presented for this book.
+     *
+     * The dashboard's switch decides whether the button is offered, but a book
+     * whose questions have not been written yet never offers one whatever the
+     * switch says — a button leading to an empty paper is worse than no button.
+     *
+     * The label falls back to the translated default, so a book that has
+     * nothing special to say still gets correct wording in every language.
+     */
+    public function quizButton(): array
+    {
+        $hasQuestions = $this->hasOwnQuiz();
+
+        return [
+            'visible' => $hasQuestions && (bool) $this->quiz_button_visible,
+            'label' => $this->t('quiz_button_label') ?: __('Take the quiz'),
+        ];
     }
 
     /** The reading programmes this book appears in, if any. */
