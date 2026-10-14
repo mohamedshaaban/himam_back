@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Support\Media;
 
 class UserResource extends JsonResource
 {
@@ -17,7 +18,7 @@ class UserResource extends JsonResource
             'city' => $this->city,
             'country' => $this->country,
             'accepts_email' => (bool) $this->accepts_email,
-            'avatar' => $this->avatar,
+            'avatar' => Media::url($this->avatar),
             'role' => $this->role,
             'locale' => $this->locale,
             'points' => $this->points,

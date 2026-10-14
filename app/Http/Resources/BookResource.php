@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Support\Media;
 
 class BookResource extends JsonResource
 {
@@ -14,7 +15,7 @@ class BookResource extends JsonResource
             'title' => $this->t('title'),
             'author' => $this->t('author'),
             'description' => $this->t('description'),
-            'cover' => $this->cover,
+            'cover' => Media::url($this->cover),
             'pages' => $this->pages,
             'points' => $this->points,
             'position' => $this->position,

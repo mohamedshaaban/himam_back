@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Support\Media;
 
 class BadgeResource extends JsonResource
 {
@@ -13,7 +14,7 @@ class BadgeResource extends JsonResource
             'id' => $this->id,
             'name' => $this->t('name'),
             'description' => $this->t('description'),
-            'image' => $this->image,
+            'image' => Media::url($this->image),
             'criteria_type' => $this->criteria_type,
             'criteria_value' => $this->criteria_value,
             'position' => $this->position,

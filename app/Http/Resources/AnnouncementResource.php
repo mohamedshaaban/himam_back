@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Support\Media;
 
 class AnnouncementResource extends JsonResource
 {
@@ -14,7 +15,7 @@ class AnnouncementResource extends JsonResource
             'tag' => $this->t('tag'),
             'title' => $this->t('title'),
             'body' => $this->t('body'),
-            'image' => $this->image,
+            'image' => Media::url($this->image),
             'category' => $this->category,
             'published_at' => $this->published_at?->toIso8601String(),
             'read' => $this->when(isset($this->readerRead), fn () => (bool) $this->readerRead),

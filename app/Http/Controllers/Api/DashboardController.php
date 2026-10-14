@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\ProgressService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Support\Media;
 
 class DashboardController extends Controller
 {
@@ -59,7 +60,7 @@ class DashboardController extends Controller
                 'rank' => $index + 1,
                 'id' => $user->id,
                 'name' => $user->name,
-                'avatar' => $user->avatar,
+                'avatar' => Media::url($user->avatar),
                 'points' => (int) $user->points,
                 'level' => $user->level?->t('name'),
             ])

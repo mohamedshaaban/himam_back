@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Support\Media;
 
 class SectionResource extends JsonResource
 {
@@ -22,7 +23,7 @@ class SectionResource extends JsonResource
 
             // Sent with the list too: the book screen can mark which sections
             // are a document before the reader opens one.
-            'pdf' => $this->pdf,
+            'pdf' => Media::url($this->pdf),
 
             'read' => $this->when(isset($this->readerRead), fn () => (bool) $this->readerRead),
             'passed' => $this->when(isset($this->readerPassed), fn () => (bool) $this->readerPassed),

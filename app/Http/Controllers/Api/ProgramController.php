@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\ProgramAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Support\Media;
 
 class ProgramController extends Controller
 {
@@ -35,7 +36,7 @@ class ProgramController extends Controller
                 'title' => $program->t('title'),
                 'description' => $program->t('description'),
                 'type' => $program->type,
-                'cover' => $program->cover,
+                'cover' => Media::url($program->cover),
                 'enrolled' => in_array($program->id, $enrolled, true),
                 'books_count' => count($books),
                 'books_completed' => count(array_filter($books, fn ($row) => $row['completed'])),
@@ -68,7 +69,7 @@ class ProgramController extends Controller
             'id' => $row['book']->id,
             'title' => $row['book']->t('title'),
             'author' => $row['book']->t('author'),
-            'cover' => $row['book']->cover,
+            'cover' => Media::url($row['book']->cover),
             'points' => $row['book']->points,
             'order_index' => $row['book']->pivot->order_index ?? 0,
             'unlocked' => $row['unlocked'],
@@ -85,7 +86,7 @@ class ProgramController extends Controller
                 'title' => $program->t('title'),
                 'description' => $program->t('description'),
                 'type' => $program->type,
-                'cover' => $program->cover,
+                'cover' => Media::url($program->cover),
                 'enrolled' => in_array($program->id, $this->enrolledIds($user), true),
                 'books' => $books,
                 'books_completed' => $books->where('completed', true)->count(),

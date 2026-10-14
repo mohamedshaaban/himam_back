@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Support\Media;
 
 class HonorBoardController extends Controller
 {
@@ -40,7 +41,7 @@ class HonorBoardController extends Controller
             'rank' => $index + 1,
             'id' => $user->id,
             'name' => $user->name,
-            'avatar' => $user->avatar,
+            'avatar' => Media::url($user->avatar),
             'level' => $user->level?->t('name'),
             'books' => $this->booksCompleted($user),
             'points' => $scope === 'all'
