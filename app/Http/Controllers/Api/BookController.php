@@ -36,8 +36,18 @@ class BookController extends Controller
         $book->load(['level', 'sections' => fn ($q) => $q->withCount('questions')]);
 
         $passed = $request->user()?->passedSectionIds() ?? [];
+
+        // whereNotNull('book_section_id') matters: a reader who opened a book
+        // that is read as one document has a progress row with no section, and
+        // without this the list below carries a null. Nothing matches a null
+        // today only because the comparison below is strict — which is a thin
+        // thing for "is this section read" to rest on.
         $read = $request->user()
-            ? $request->user()->progress()->whereNotNull('read_at')->pluck('book_section_id')->all()
+            ? $request->user()->progress()
+                ->whereNotNull('book_section_id')
+                ->whereNotNull('read_at')
+                ->pluck('book_section_id')
+                ->all()
             : [];
 
         foreach ($book->sections as $section) {
