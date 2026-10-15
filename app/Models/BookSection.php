@@ -30,9 +30,19 @@ class BookSection extends Model
         return $this->belongsTo(Book::class);
     }
 
+    /**
+     * The questions still belonging to this section.
+     *
+     * A question the book has claimed keeps its book_section_id, so the move
+     * can be undone and so the record of where it was written survives. The
+     * whereNull keeps it out of the section's own list in the meantime —
+     * otherwise it would appear in two places at once in the editor.
+     */
     public function questions(): HasMany
     {
-        return $this->hasMany(Question::class)->orderBy('position');
+        return $this->hasMany(Question::class)
+            ->whereNull('book_id')
+            ->orderBy('position');
     }
 
     public function attempts(): HasMany
