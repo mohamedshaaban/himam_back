@@ -120,6 +120,22 @@ class User extends Authenticatable
             ->all();
     }
 
+    /**
+     * The sections this reader has opened.
+     *
+     * Separate from passedSectionIds(): a reader who has read every section of
+     * a book examined as a whole has passed none of them, and the book screen
+     * still needs to show how far through the reading they are.
+     */
+    public function readSectionIds(): array
+    {
+        return $this->progress()
+            ->whereNotNull('book_section_id')
+            ->whereNotNull('read_at')
+            ->pluck('book_section_id')
+            ->all();
+    }
+
     public function passedSectionIds(): array
     {
         // A progress row keyed on a book rather than a section has no section

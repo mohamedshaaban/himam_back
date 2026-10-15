@@ -29,6 +29,13 @@ class QuizController extends Controller
 
         $this->assertCanRead($request, $section->book);
 
+        // The exam is the book's or the sections', never both: a book whose own
+        // questions have been written is examined once, over all of it, and the
+        // sections are then the way through the reading rather than five
+        // separate examinations. 404 rather than an empty paper, so a client
+        // cannot render a quiz that does not exist.
+        abort_if($section->book->hasOwnQuiz(), 404);
+
         $questions = $section->questions()->with('options')->get();
 
         $attempts = $request->user()
@@ -79,6 +86,13 @@ class QuizController extends Controller
         abort_unless($section->book->is_published, 404);
 
         $this->assertCanRead($request, $section->book);
+
+        // The exam is the book's or the sections', never both: a book whose own
+        // questions have been written is examined once, over all of it, and the
+        // sections are then the way through the reading rather than five
+        // separate examinations. 404 rather than an empty paper, so a client
+        // cannot render a quiz that does not exist.
+        abort_if($section->book->hasOwnQuiz(), 404);
 
         $validated = $request->validate([
             'answers' => ['required', 'array', 'min:1'],

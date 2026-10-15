@@ -17,7 +17,7 @@ class BookController extends Controller
     {
         $books = Book::published()
             ->with('level')
-            ->withCount('sections')
+            ->withCount(['sections', 'questions'])
             ->when($request->filled('level_id'), fn ($q) => $q->where('level_id', $request->integer('level_id')))
             ->orderBy('position')
             ->get();
@@ -33,22 +33,12 @@ class BookController extends Controller
 
         $this->assertCanRead($request, $book);
 
-        $book->load(['level', 'sections' => fn ($q) => $q->withCount('questions')]);
+        $book->load(['level', 'sections' => fn ($q) => $q->withCount('questions')])
+            ->loadCount('questions');
 
         $passed = $request->user()?->passedSectionIds() ?? [];
 
-        // whereNotNull('book_section_id') matters: a reader who opened a book
-        // that is read as one document has a progress row with no section, and
-        // without this the list below carries a null. Nothing matches a null
-        // today only because the comparison below is strict — which is a thin
-        // thing for "is this section read" to rest on.
-        $read = $request->user()
-            ? $request->user()->progress()
-                ->whereNotNull('book_section_id')
-                ->whereNotNull('read_at')
-                ->pluck('book_section_id')
-                ->all()
-            : [];
+        $read = $request->user()?->readSectionIds() ?? [];
 
         foreach ($book->sections as $section) {
             $section->readerPassed = in_array($section->id, $passed, true);
@@ -74,25 +64,28 @@ class BookController extends Controller
 
         $passed = $user->passedSectionIds();
         $passedBooks = $user->passedBookIds();
+        $readSections = $user->readSectionIds();
 
         foreach ($books as $book) {
             $sectionIds = $book->relationLoaded('sections')
                 ? $book->sections->pluck('id')
                 : $book->sections()->pluck('id');
 
-            $done = $sectionIds->intersect($passed)->count();
             $total = $sectionIds->count();
+            $done = $sectionIds->intersect($passed)->count();
+            $read = $sectionIds->intersect($readSections)->count();
 
-            // A book with no sections is finished by its own quiz instead.
-            $completed = $total > 0
-                ? $done === $total
-                : in_array($book->id, $passedBooks, true);
-
+            // Reading and passing are reported side by side rather than folded
+            // into one number. When the exam is the book's own there are no
+            // section passes to count, and a reader who has read every section
+            // would otherwise sit at 0% with nothing to show for it.
             $book->readerProgress = [
-                'sections_passed' => $done,
                 'sections_total' => $total,
-                'completed' => $completed,
+                'sections_read' => $read,
+                'sections_passed' => $done,
+                'read_percent' => $total > 0 ? (int) round($read / $total * 100) : 0,
                 'percent' => $total > 0 ? (int) round($done / $total * 100) : 0,
+                'completed' => $book->completedBy($passed, $passedBooks),
             ];
         }
     }

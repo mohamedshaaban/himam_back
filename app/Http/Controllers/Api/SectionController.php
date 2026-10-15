@@ -72,6 +72,11 @@ class SectionController extends Controller
                 'book' => [
                     'id' => $section->book->id,
                     'title' => $section->book->t('title'),
+
+                    // Where the exam lives, so the screen sends the reader to
+                    // the right one instead of guessing from the section.
+                    'has_own_quiz' => $section->book->hasOwnQuiz(),
+                    'quiz_button' => $section->book->quizButton(),
                 ],
                 'position' => $section->position,
                 'sections_total' => $section->book->sections()->count(),

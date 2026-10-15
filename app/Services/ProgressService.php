@@ -268,23 +268,17 @@ class ProgressService
             $existing = $held->get($level->id);
 
             $books = $level->books->where('is_published', true);
-            $sectionIds = $books->flatMap->sections->pluck('id');
-
-            // Books examined as a whole have no sections to count, so they are
-            // checked separately — a level may hold both kinds.
-            $wholeBookIds = $books->filter(fn (Book $book) => $book->sections->isEmpty())
-                ->pluck('id');
 
             // A level with no content yet must not hand out certificates.
-            if ($sectionIds->isEmpty() && $wholeBookIds->isEmpty()) {
+            if ($books->isEmpty()) {
                 continue;
             }
 
-            if ($sectionIds->diff($passedSectionIds)->isNotEmpty()) {
-                continue;
-            }
+            $unfinished = $books->first(
+                fn (Book $book) => ! $book->completedBy($passedSectionIds, $passedBookIds)
+            );
 
-            if ($wholeBookIds->diff($passedBookIds)->isNotEmpty()) {
+            if ($unfinished) {
                 continue;
             }
 
@@ -323,14 +317,10 @@ class ProgressService
 
         $issued = collect();
 
-        foreach (Book::published()->with('sections:id,book_id')->get() as $book) {
-            $sectionIds = $book->sections->pluck('id');
+        $books = Book::published()->with('sections:id,book_id')->withCount('questions')->get();
 
-            $completed = $sectionIds->isNotEmpty()
-                ? $sectionIds->diff($passedSectionIds)->isEmpty()
-                : in_array($book->id, $passedBookIds, true);
-
-            if (! $completed) {
+        foreach ($books as $book) {
+            if (! $book->completedBy($passedSectionIds, $passedBookIds)) {
                 continue;
             }
 
@@ -482,18 +472,10 @@ class ProgressService
         $passedBookIds = $user->passedBookIds();
 
         $booksCompleted = Book::published()
-            ->withCount('sections')
+            ->with('sections:id,book_id')
+            ->withCount('questions')
             ->get()
-            ->filter(function (Book $book) use ($passedSectionIds, $passedBookIds) {
-                // A book with no sections is finished by its own quiz.
-                if ($book->sections_count === 0) {
-                    return in_array($book->id, $passedBookIds, true);
-                }
-
-                $sectionIds = $book->sections()->pluck('id');
-
-                return $sectionIds->diff($passedSectionIds)->isEmpty();
-            })
+            ->filter(fn (Book $book) => $book->completedBy($passedSectionIds, $passedBookIds))
             ->count();
 
         return [
@@ -520,15 +502,18 @@ class ProgressService
         $attempts = $user->quizAttempts()->get()->groupBy('book_section_id');
         $certificates = $user->certificates()->whereNotNull('level_id')->get()->keyBy('level_id');
 
+        $passedSectionIds = $user->passedSectionIds();
+        $passedBookIds = $user->passedBookIds();
+
         $levels = Level::query()
             ->where('is_active', true)
-            ->with(['books' => fn ($q) => $q->where('is_published', true)->orderBy('position'),
+            ->with(['books' => fn ($q) => $q->where('is_published', true)->withCount('questions')->orderBy('position'),
                     'books.sections' => fn ($q) => $q->withCount('questions')->orderBy('position')])
             ->orderBy('position')
             ->get();
 
-        $levelPayload = $levels->map(function (Level $level) use ($progressRows, $attempts, $certificates) {
-            $books = $level->books->map(function (Book $book) use ($progressRows, $attempts) {
+        $levelPayload = $levels->map(function (Level $level) use ($progressRows, $attempts, $certificates, $passedSectionIds, $passedBookIds) {
+            $books = $level->books->map(function (Book $book) use ($progressRows, $attempts, $passedSectionIds, $passedBookIds) {
                 $sections = $book->sections->map(function (BookSection $section) use ($progressRows, $attempts) {
                     $row = $progressRows->get($section->id);
                     $tries = $attempts->get($section->id, collect());
@@ -547,6 +532,7 @@ class ProgressService
                 })->values();
 
                 $passed = $sections->where('passed', true)->count();
+                $read = $sections->where('read', true)->count();
                 $total = $sections->count();
 
                 return [
@@ -554,10 +540,13 @@ class ProgressService
                     'title' => $book->t('title'),
                     'points' => $book->points,
                     'pages' => $book->pages,
+                    'has_own_quiz' => $book->hasOwnQuiz(),
                     'sections_total' => $total,
+                    'sections_read' => $read,
                     'sections_passed' => $passed,
+                    'read_percent' => $total > 0 ? (int) round($read / $total * 100) : 0,
                     'percent' => $total > 0 ? (int) round($passed / $total * 100) : 0,
-                    'completed' => $total > 0 && $passed === $total,
+                    'completed' => $book->completedBy($passedSectionIds, $passedBookIds),
                     'sections' => $sections,
                 ];
             })->values();

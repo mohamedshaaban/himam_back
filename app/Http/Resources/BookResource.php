@@ -20,7 +20,7 @@ class BookResource extends JsonResource
             // How this book is read. A client needs to know before it decides
             // whether to show a sections list or a document and one quiz.
             'pdf' => Media::url($this->t('pdf')),
-            'has_own_quiz' => $this->questions()->exists(),
+            'has_own_quiz' => $this->hasOwnQuiz(),
 
             // Whether to offer the exam, and what the button says, are set in
             // the dashboard — the client renders what it is told rather than

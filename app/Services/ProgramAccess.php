@@ -29,7 +29,7 @@ class ProgramAccess
     {
         return Program::query()
             ->visibleTo($user)
-            ->with(['books' => fn ($q) => $q->published()->with('sections:id,book_id')])
+            ->with(['books' => fn ($q) => $q->published()->with('sections:id,book_id')->withCount('questions')])
             ->orderBy('position')
             ->orderBy('id')
             ->get();
@@ -47,7 +47,7 @@ class ProgramAccess
         $passedBooks = $user ? $user->passedBookIds() : [];
         $books = $program->relationLoaded('books')
             ? $program->books
-            : $program->books()->published()->with('sections:id,book_id')->get();
+            : $program->books()->published()->with('sections:id,book_id')->withCount('questions')->get();
 
         $rows = [];
         $previousComplete = true;      // The first book is open by definition.
@@ -58,12 +58,7 @@ class ProgramAccess
             $total = $sectionIds->count();
             $done = $sectionIds->intersect($passed)->count();
 
-            // A book with no sections is finished by its own quiz; one with
-            // neither cannot be finished at all, so it must not become a wall
-            // the rest of the programme sits behind.
-            $completed = $total > 0
-                ? $done === $total
-                : in_array($book->id, $passedBooks, true);
+            $completed = $book->completedBy($passed, $passedBooks);
 
             // A book the reader has already finished stays open even if the
             // one now before it has not been. Reordering a programme must not

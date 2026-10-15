@@ -64,9 +64,54 @@ class Book extends Model
         return $this->hasMany(Question::class)->orderBy('position');
     }
 
+    /**
+     * Whether the exam for this book is the book's own.
+     *
+     * Uses a loaded count or relation when the caller has one, so a list of
+     * books does not become a query per book.
+     */
     public function hasOwnQuiz(): bool
     {
+        if (isset($this->questions_count)) {
+            return $this->questions_count > 0;
+        }
+
+        if ($this->relationLoaded('questions')) {
+            return $this->questions->isNotEmpty();
+        }
+
         return $this->questions()->exists();
+    }
+
+    /**
+     * Whether this reader has finished the book.
+     *
+     * One rule in one place. It was five, and one of them had already drifted.
+     *
+     * A book with its own exam is finished by passing it, however it is laid
+     * out — sections are then the way through the reading, not five separate
+     * examinations. A book without one is finished by passing every section.
+     * A book with neither cannot be finished at all, and must not become a wall
+     * the rest of a programme sits behind.
+     *
+     * @param  array<int,int>  $passedSectionIds
+     * @param  array<int,int>  $passedBookIds
+     */
+    public function completedBy(array $passedSectionIds, array $passedBookIds): bool
+    {
+        if ($this->hasOwnQuiz()) {
+            return in_array($this->id, $passedBookIds, true);
+        }
+
+        $sectionIds = $this->relationLoaded('sections')
+            ? $this->sections->pluck('id')
+            : $this->sections()->pluck('id');
+
+        if ($sectionIds->isEmpty()) {
+            return false;
+        }
+
+        return $sectionIds->diff($passedSectionIds)->isEmpty();
     }
 
     /**

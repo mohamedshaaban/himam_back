@@ -11,34 +11,45 @@ examples use `en`.
 
 ---
 
-## 1. Two ways a book is read
+## 1. Layout and examination are separate decisions
 
-A book is read **in sections**, each with its own short quiz, or **as one
-document** with one exam over all of it. The dashboard decides which by whether
-the book has sections — there is no separate switch, because a switch could
-disagree with the sections themselves.
+**How a book is laid out** follows from whether it has sections. A book with
+sections is read part by part; a book without them is read as one document.
 
-A book may also carry the whole text as one document *beside* its sections. The
-document is then the full text and the sections are the way through it.
+**Where its exam lives** follows from where the questions were written. If a
+book has questions of its own, it is examined once over all of it and the
+section quizzes stop being offered. If it has none, each section carries its
+own quiz.
 
-| | Read in sections | Read as one document |
-|---|---|---|
-| Material | one document per section | one document for the book |
-| Exam | one per section | one for the whole book |
-| Exam endpoint | `/sections/{id}/quiz` | `/books/{id}/quiz` |
-| Marked as read | `POST /sections/{id}/read` | `POST /books/{id}/read` |
-| Points | per section | the book's own `points` |
-| Finished when | every section passed | the book's exam passed |
+The two are independent, so three shapes exist in practice:
 
-Both kinds issue a certificate for the book once it is finished.
+| | Layout | Exam | Finished when |
+|---|---|---|---|
+| **A** | one document | the book's own | the book's exam is passed |
+| **B** | sections | the book's own | the book's exam is passed |
+| **C** | sections | one per section | every section is passed |
 
-### Telling them apart
+Shape **B** is the one the programme asks for most: the sections are the way
+through the reading, and the examination happens once at the end.
 
-`sections_count` and `has_own_quiz` on the book say which kind it is.
+A book can also carry the whole text as one document beside its sections, in
+any shape.
 
-#### A book read as one document
+### Reading each shape off the payload
 
-No sections, a document of its own, and its own exam.
+`sections` and `has_own_quiz` say which shape a book is in.
+
+| Field | Meaning |
+|---|---|
+| `sections` / `sections_count` | empty means it is read as one document |
+| `has_own_quiz` | true means the exam is the book's, not the sections' |
+| `quiz_button.visible` | whether to offer the book's exam at all |
+| `quiz_button.label` | what the button should say, in the requested language |
+| `pdf` | the whole-book document, if one was uploaded |
+
+#### Read as one document, examined as a whole
+
+Shape **A**. No sections, a document of its own, its own exam.
 
 ```http
 GET /api/books/9
@@ -74,18 +85,20 @@ Authorization: Bearer <token>
     },
     "sections": [],
     "progress": {
-      "sections_passed": 0,
       "sections_total": 0,
-      "completed": false,
-      "percent": 0
+      "sections_read": 0,
+      "sections_passed": 0,
+      "read_percent": 0,
+      "percent": 0,
+      "completed": false
     }
   }
 }
 ```
 
-#### A book read in sections
+#### Read in sections, examined as a whole
 
-Three sections; `has_own_quiz` is false, so there is no book-level exam even though the whole text is attached as a document.
+Shape **B**. Three sections for the reading, and `has_own_quiz` is true — so the exam is the book's, and the sections carry none.
 
 ```http
 GET /api/books/1
@@ -105,10 +118,10 @@ Authorization: Bearer <token>
     "description": "A practical introduction to what structured reading means and the tools it uses, setting out a weekly plan that begins with a goal and ends with a review.",
     "cover": "http://127.0.0.1:8000/assets/banner.svg",
     "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
-    "has_own_quiz": false,
+    "has_own_quiz": true,
     "quiz_button": {
-      "visible": false,
-      "label": "Take the quiz"
+      "visible": true,
+      "label": "Exam on the whole book"
     },
     "pages": 140,
     "points": 400,
@@ -155,6 +168,72 @@ Authorization: Bearer <token>
   …
 ```
 
+#### Read in sections, examined section by section
+
+Shape **C**. `has_own_quiz` is false and `quiz_button.visible` with it; each section is examined on its own.
+
+```http
+GET /api/books/2
+Accept: application/json
+Accept-Language: en
+Authorization: Bearer <token>
+```
+
+`200`
+
+```json
+{
+  "data": {
+    "id": 2,
+    "title": "Foundations of Systematic Thinking",
+    "author": "Prepared by the programme administration",
+    "description": "Sets out the rules of ordered thinking and how to apply them to what you read, so a text becomes understanding rather than scattered facts.",
+    "cover": "http://127.0.0.1:8000/assets/banner.svg",
+    "pdf": null,
+    "has_own_quiz": false,
+    "quiz_button": {
+      "visible": false,
+      "label": "Take the quiz"
+    },
+    "pages": 165,
+    "points": 400,
+    "position": 1,
+    "level": {
+      "id": 1,
+      "name": "First Level",
+      "description": "An introduction to structured reading and its basic tools.",
+      "position": 1
+    },
+    "sections": [
+      {
+        "id": 4,
+        "book_id": 2,
+        "title": "Why We Read Regularly",
+        "position": 1,
+        "questions_count": 3,
+        "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
+        "read": false,
+        "passed": false
+      },
+      {
+        "id": 5,
+        "book_id": 2,
+        "title": "Building a Reading Plan",
+        "position": 2,
+        "questions_count": 3,
+        "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
+        "read": false,
+        "passed": false
+      },
+      {
+        "id": 6,
+        "book_id": 2,
+        "title": "Review and Summary",
+        "position": 3,
+        "questions_count": 3,
+  …
+```
+
 ---
 
 ## 2. The quiz button comes from the API
@@ -171,13 +250,13 @@ sitting and a resit; neither should need a release.
 }
 ```
 
-`visible` is the dashboard's switch **and** the existence of questions: a book
-with no questions yet reports `false` whatever the switch says, because a button
-leading to an empty paper is worse than no button. `label` falls back to the
-translated default when the dashboard has set nothing.
+`visible` is the dashboard's switch **and** the existence of the book's own
+questions: a book examined by section, or one whose questions have not been
+written yet, reports `false` whatever the switch says. `label` falls back to
+the translated default when the dashboard has set nothing.
 
 The client renders what it is told. It must not decide for itself that a book
-with questions should show a button.
+should show a button.
 
 The dashboard sets both through `PUT /api/admin/books/{id}`:
 
@@ -188,17 +267,20 @@ The dashboard sets both through `PUT /api/admin/books/{id}`:
 }
 ```
 
+and writes the book's own questions through `POST /api/admin/books/{id}/questions`,
+which is what moves the exam from the sections to the book.
+
 ---
 
-## 3. Opening the book
+## 3. Opening the material
 
 Opening the material is what counts as reading it. The API does not infer this
 from a fetch of the questions — a prefetch or a retry is not a reader — so the
 client says so explicitly.
 
-#### Record that the book was opened
+#### Record that a whole-book document was opened
 
-Sent once, when the reader opens a book read as one document. Failing to record a read must never stop the reader reading, so a client ignores the error.
+For a book read as one document.
 
 ```http
 POST /api/books/9/read
@@ -220,7 +302,7 @@ Authorization: Bearer <token>
 
 #### Record that a section was opened
 
-The same thing for a section.
+For a section. A book that has sections is tracked by those, so a client does not also record a read against the book — that would give two answers to how far the reader has got.
 
 ```http
 POST /api/sections/1/read
@@ -241,16 +323,96 @@ Authorization: Bearer <token>
 }
 ```
 
-A book that also has sections is tracked by those, so a client does not record
-a read against the book as well — that would give two answers to how far the
-reader has got.
+### Reading and passing are reported separately
+
+A book examined as a whole has no section passes to count. If progress were a
+single number drawn from passes, a reader who had read every page would sit at
+zero with nothing to show for it. So the `progress` block carries both.
+
+#### Reading progress after one section
+
+One of three sections read, none passed — because on this book there is nothing to pass until the book's own exam.
+
+```http
+GET /api/books/1
+Accept: application/json
+Accept-Language: en
+Authorization: Bearer <token>
+```
+
+`200`
+
+```json
+{
+  "data": {
+    "id": 1,
+    "title": "Introduction to Structured Reading",
+    "author": "Prepared by the programme administration",
+    "description": "A practical introduction to what structured reading means and the tools it uses, setting out a weekly plan that begins with a goal and ends with a review.",
+    "cover": "http://127.0.0.1:8000/assets/banner.svg",
+    "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
+    "has_own_quiz": true,
+    "quiz_button": {
+      "visible": true,
+      "label": "Exam on the whole book"
+    },
+    "pages": 140,
+    "points": 400,
+    "position": 0,
+    "level": {
+      "id": 1,
+      "name": "First Level",
+      "description": "An introduction to structured reading and its basic tools.",
+      "position": 1
+    },
+    "sections": [
+      {
+        "id": 1,
+        "book_id": 1,
+        "title": "Why We Read Regularly",
+        "position": 1,
+        "questions_count": 3,
+        "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
+        "read": true,
+        "passed": false
+      },
+      {
+        "id": 2,
+        "book_id": 1,
+        "title": "Building a Reading Plan",
+        "position": 2,
+        "questions_count": 3,
+        "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
+        "read": false,
+        "passed": false
+      },
+      {
+        "id": 3,
+        "book_id": 1,
+        "title": "Review and Summary",
+        "position": 3,
+        "questions_count": 3,
+  …
+```
+
+| Field | Meaning |
+|---|---|
+| `sections_total` | how many sections the book has |
+| `sections_read` | how many the reader has opened |
+| `sections_passed` | how many section quizzes they have passed — always `0` in shapes A and B |
+| `read_percent` | reading progress |
+| `percent` | passing progress |
+| `completed` | the book is finished: its own exam passed, or every section passed |
+
+`completed` is the one to trust for "has this reader finished the book". It
+follows whichever rule applies to that book's shape.
 
 ---
 
 ## 4. Fetching the paper
 
-The questions come without the answers. The key is held server-side and is never
-sent before grading.
+The questions come without the answers. The key is held server-side and is
+never sent before grading.
 
 #### The exam, before any attempt
 
@@ -573,11 +735,11 @@ Content-Type: application/json
   ],
   "new_certificates": [
     {
-      "id": 41,
-      "serial": "CERT-2026-59YYKL",
+      "id": 46,
+      "serial": "CERT-2026-TSUF0M",
       "title": "A book without sections",
-      "issued_at": "2026-10-14",
-      "verification_url": "http://127.0.0.1:8000/api/certificates/verify/76f5b1c3-df05-42b3-b87c-36c8cf5b8057"
+      "issued_at": "2026-10-15",
+      "verification_url": "http://127.0.0.1:8000/api/certificates/verify/2261ecdd-a84f-4bc3-a44b-77e27a196e06"
     }
   ],
   "stats": {
@@ -604,7 +766,7 @@ the client go and look:
    recalculated.
 
 Every certificate and every badge also arrives as a notification, covered in
-section 8.
+section 9.
 
 ---
 
@@ -686,7 +848,141 @@ certificate stands, and `best_score` keeps the better result.
 
 ---
 
-## 8. What the reader is told
+## 8. A section exam, where one still applies
+
+On a book in shape **C**, each section is examined on its own. The request and
+the response have the same shape as the book exam, so one screen serves both.
+
+#### A section exam
+
+The paper for one section.
+
+```http
+GET /api/sections/4/quiz
+Accept: application/json
+Accept-Language: en
+Authorization: Bearer <token>
+```
+
+`200`
+
+```json
+{
+  "data": [
+    {
+      "id": 10,
+      "text": "What does the section begin by settling?",
+      "position": 0,
+      "options": [
+        {
+          "id": 28,
+          "text": "Settling the purpose of reading",
+          "position": 0
+        },
+        {
+          "id": 29,
+          "text": "Memorising the table of contents",
+          "position": 1
+        },
+        {
+          "id": 30,
+          "text": "Reading the conclusion first",
+          "position": 2
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "text": "Which statement matches the structured reading method?",
+      "position": 1,
+      "options": [
+        {
+          "id": 31,
+          "text": "Finishing the book in one sitting",
+          "position": 0
+        },
+        {
+          "id": 32,
+          "text": "A few pages every day",
+          "position": 1
+        },
+        {
+          "id": 33,
+          "text": "Reading only when time allows",
+          "position": 2
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "text": "What is asked of the reader before moving on to the quiz?",
+      "position": 2,
+      "options": [
+        {
+  …
+```
+
+#### Passing a section exam
+
+The same body the book exam returns. The book's certificate is issued once the last of its sections is passed.
+
+```http
+POST /api/sections/4/quiz
+Accept: application/json
+Accept-Language: en
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "answers": {
+    "10": 28,
+    "11": 32,
+    "12": 35
+  }
+}
+```
+
+`200`
+
+```json
+{
+  "score": 3,
+  "total": 3,
+  "passed": true,
+  "points_awarded": 150,
+  "correct_options": {
+    "10": 28,
+    "11": 32,
+    "12": 35
+  },
+  "incorrect_questions": [],
+  "new_badges": [
+    {
+      "id": 1,
+      "name": "The Persistent",
+      "description": "Passed your first section of the programme.",
+      "image": "http://127.0.0.1:8000/assets/badge.png",
+      "criteria_type": "sections_passed",
+      "criteria_value": 1,
+      "position": 0
+    }
+  ],
+  "new_certificates": [],
+  "stats": {
+    "points": 650,
+    "sections_passed": 1,
+    "sections_total": 18,
+    "books_completed": 1,
+    "books_total": 7,
+    "badges_earned": 2,
+    "certificates": 1
+  }
+}
+```
+
+---
+
+## 9. What the reader is told
 
 A certificate and a badge each arrive in the reader's own notification feed, as
 an announcement addressed to them. This is the same inbox that carries the
@@ -695,7 +991,7 @@ and the reader can mute either kind.
 
 #### The notification feed
 
-The three newest are the two badges and the certificate from the pass above; the rest are the dashboard's general announcements.
+The newest entries are the badges and certificates from the passes above; the rest are the dashboard's general announcements.
 
 ```http
 GET /api/announcements
@@ -710,33 +1006,33 @@ Authorization: Bearer <token>
 {
   "data": [
     {
-      "id": 104,
+      "id": 115,
       "tag": "Badge",
       "title": "New badge: The Persistent",
       "body": "Congratulations — “The Persistent” has been added to your badges.",
       "image": "http://127.0.0.1:8000/assets/badge.png",
       "category": "badge",
-      "published_at": "2026-10-14T17:48:01+00:00",
+      "published_at": "2026-10-15T09:51:54+00:00",
       "read": false
     },
     {
-      "id": 102,
+      "id": 114,
+      "tag": "Certificate",
+      "title": "Your certificate for “A book without sections” has been issued",
+      "body": "Congratulations — your certificate for “A book without sections” has been issued with serial CERT-2026-TSUF0M. You will find it on the certificates page.",
+      "image": null,
+      "category": "certificate",
+      "published_at": "2026-10-15T09:51:51+00:00",
+      "read": false
+    },
+    {
+      "id": 113,
       "tag": "Badge",
       "title": "New badge: Book Finisher",
       "body": "Congratulations — “Book Finisher” has been added to your badges.",
       "image": "http://127.0.0.1:8000/assets/badge.png",
       "category": "badge",
-      "published_at": "2026-10-14T17:47:56+00:00",
-      "read": false
-    },
-    {
-      "id": 103,
-      "tag": "Certificate",
-      "title": "Your certificate for “A book without sections” has been issued",
-      "body": "Congratulations — your certificate for “A book without sections” has been issued with serial CERT-2026-59YYKL. You will find it on the certificates page.",
-      "image": null,
-      "category": "certificate",
-      "published_at": "2026-10-14T17:47:56+00:00",
+      "published_at": "2026-10-15T09:51:50+00:00",
       "read": false
     },
     {
@@ -758,11 +1054,6 @@ Authorization: Bearer <token>
       "category": "exam",
       "published_at": "2026-10-13T17:14:41+00:00",
       "read": false
-    },
-    {
-      "id": 3,
-      "tag": "Results",
-      "title": "First level results are out",
   …
 ```
 
@@ -775,7 +1066,7 @@ news, so the unread count does not move.
 
 ---
 
-## 9. The certificates themselves
+## 10. The certificates themselves
 
 #### Certificates held
 
@@ -794,10 +1085,10 @@ Authorization: Bearer <token>
 {
   "data": [
     {
-      "id": 41,
-      "serial": "CERT-2026-59YYKL",
+      "id": 46,
+      "serial": "CERT-2026-TSUF0M",
       "title": "A book without sections",
-      "issued_at": "2026-10-14",
+      "issued_at": "2026-10-15",
       "level": null,
       "book": {
         "id": 9,
@@ -815,7 +1106,7 @@ Authorization: Bearer <token>
         "points": 500,
         "position": 99
       },
-      "verification_url": "http://127.0.0.1:8000/api/certificates/verify/76f5b1c3-df05-42b3-b87c-36c8cf5b8057"
+      "verification_url": "http://127.0.0.1:8000/api/certificates/verify/2261ecdd-a84f-4bc3-a44b-77e27a196e06"
     }
   ]
 }
@@ -849,9 +1140,9 @@ Authorization: Bearer <token>
       "serial": null,
       "issued_at": null,
       "verification_url": null,
-      "sections_passed": 1,
+      "sections_passed": 0,
       "sections_total": 3,
-      "percent": 33
+      "percent": 0
     },
     {
       "scope": "book",
@@ -865,9 +1156,9 @@ Authorization: Bearer <token>
       "serial": null,
       "issued_at": null,
       "verification_url": null,
-      "sections_passed": 0,
+      "sections_passed": 1,
       "sections_total": 3,
-      "percent": 0
+      "percent": 33
     },
     {
       "scope": "book",
@@ -912,25 +1203,366 @@ Authorization: Bearer <token>
       "earned": false,
       "serial": null,
       "issued_at": null,
-      "verification_url": null,
-      "sections_passed": 0,
-      "sections_total": 3,
-      "percent": 0
-    },
-    {
   …
 ```
 
 ---
 
-## 10. Errors
+## 11. Errors
 
-#### No whole-book exam on a book read in sections
+#### A section quiz on a book examined as a whole
 
-A book read in sections has no book-level exam. The API answers 404 rather than an empty paper, because "here is nothing" invites a client to render an empty exam.
+The exam moved to the book, so the section no longer has one. 404 rather than an empty paper, because "here is nothing" invites a client to render an empty exam.
 
 ```http
-GET /api/books/1/quiz
+GET /api/sections/1/quiz
+Accept: application/json
+Accept-Language: en
+Authorization: Bearer <token>
+```
+
+`404`
+
+```json
+{
+  "message": "",
+  "exception": "Symfony\\Component\\HttpKernel\\Exception\\NotFoundHttpException",
+  "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Application.php",
+  "line": 1437,
+  "trace": [
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\helpers.php",
+      "line": 67,
+      "function": "abort",
+      "class": "Illuminate\\Foundation\\Application",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\helpers.php",
+      "line": 85,
+      "function": "abort"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\app\\Http\\Controllers\\Api\\QuizController.php",
+      "line": 37,
+      "function": "abort_if"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\ControllerDispatcher.php",
+      "line": 46,
+      "function": "show",
+      "class": "App\\Http\\Controllers\\Api\\QuizController",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Route.php",
+      "line": 265,
+      "function": "dispatch",
+      "class": "Illuminate\\Routing\\ControllerDispatcher",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Route.php",
+      "line": 211,
+      "function": "runController",
+      "class": "Illuminate\\Routing\\Route",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
+      "line": 822,
+      "function": "run",
+      "class": "Illuminate\\Routing\\Route",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 180,
+      "function": "Illuminate\\Routing\\{closure}",
+      "class": "Illuminate\\Routing\\Router",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Middleware\\SubstituteBindings.php",
+      "line": 50,
+      "function": "Illuminate\\Pipeline\\{closure}",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 219,
+      "function": "handle",
+      "class": "Illuminate\\Routing\\Middleware\\SubstituteBindings",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Auth\\Middleware\\Authenticate.php",
+      "line": 63,
+      "function": "Illuminate\\Pipeline\\{closure}",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 219,
+      "function": "handle",
+      "class": "Illuminate\\Auth\\Middleware\\Authenticate",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\app\\Http\\Middleware\\SetLocale.php",
+      "line": 51,
+      "function": "Illuminate\\Pipeline\\{closure}",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 219,
+      "function": "handle",
+      "class": "App\\Http\\Middleware\\SetLocale",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\app\\Http\\Middleware\\ResolveOptionalUser.php",
+      "line": 35,
+      "function": "Illuminate\\Pipeline\\{closure}",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 219,
+      "function": "handle",
+      "class": "App\\Http\\Middleware\\ResolveOptionalUser",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 137,
+      "function": "Illuminate\\Pipeline\\{closure}",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
+      "line": 821,
+      "function": "then",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
+      "line": 800,
+      "function": "runRouteWithinStack",
+      "class": "Illuminate\\Routing\\Router",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
+      "line": 764,
+      "function": "runRoute",
+      "class": "Illuminate\\Routing\\Router",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
+      "line": 753,
+      "function": "dispatchToRoute",
+      "class": "Illuminate\\Routing\\Router",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Kernel.php",
+      "line": 200,
+      "function": "dispatch",
+      "class": "Illuminate\\Routing\\Router",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 180,
+      "function": "Illuminate\\Foundation\\Http\\{closure}",
+      "class": "Illuminate\\Foundation\\Http\\Kernel",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest.php",
+      "line": 21,
+      "function": "Illuminate\\Pipeline\\{closure}",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull.php",
+      "line": 31,
+      "function": "handle",
+      "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 219,
+      "function": "handle",
+      "class": "Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest.php",
+      "line": 21,
+      "function": "Illuminate\\Pipeline\\{closure}",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\TrimStrings.php",
+      "line": 51,
+      "function": "handle",
+      "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 219,
+      "function": "handle",
+      "class": "Illuminate\\Foundation\\Http\\Middleware\\TrimStrings",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Http\\Middleware\\ValidatePostSize.php",
+      "line": 27,
+      "function": "Illuminate\\Pipeline\\{closure}",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 219,
+      "function": "handle",
+      "class": "Illuminate\\Http\\Middleware\\ValidatePostSize",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance.php",
+      "line": 109,
+      "function": "Illuminate\\Pipeline\\{closure}",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 219,
+      "function": "handle",
+      "class": "Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Http\\Middleware\\HandleCors.php",
+      "line": 74,
+      "function": "Illuminate\\Pipeline\\{closure}",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 219,
+      "function": "handle",
+      "class": "Illuminate\\Http\\Middleware\\HandleCors",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Http\\Middleware\\TrustProxies.php",
+      "line": 58,
+      "function": "Illuminate\\Pipeline\\{closure}",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 219,
+      "function": "handle",
+      "class": "Illuminate\\Http\\Middleware\\TrustProxies",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\InvokeDeferredCallbacks.php",
+      "line": 22,
+      "function": "Illuminate\\Pipeline\\{closure}",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 219,
+      "function": "handle",
+      "class": "Illuminate\\Foundation\\Http\\Middleware\\InvokeDeferredCallbacks",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Http\\Middleware\\ValidatePathEncoding.php",
+      "line": 26,
+      "function": "Illuminate\\Pipeline\\{closure}",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 219,
+      "function": "handle",
+      "class": "Illuminate\\Http\\Middleware\\ValidatePathEncoding",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
+      "line": 137,
+      "function": "Illuminate\\Pipeline\\{closure}",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Kernel.php",
+      "line": 175,
+      "function": "then",
+      "class": "Illuminate\\Pipeline\\Pipeline",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Kernel.php",
+      "line": 144,
+      "function": "sendRequestThroughRouter",
+      "class": "Illuminate\\Foundation\\Http\\Kernel",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Application.php",
+      "line": 1220,
+      "function": "handle",
+      "class": "Illuminate\\Foundation\\Http\\Kernel",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\public\\index.php",
+      "line": 20,
+      "function": "handleRequest",
+      "class": "Illuminate\\Foundation\\Application",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\resources\\server.php",
+      "line": 23,
+      "function": "require_once"
+    }
+  ]
+}
+```
+
+#### A book exam on a book examined by section
+
+The mirror image: this book is examined section by section, so it has no exam of its own.
+
+```http
+GET /api/books/2/quiz
 Accept: application/json
 Accept-Language: en
 Authorization: Bearer <token>
@@ -1313,21 +1945,23 @@ rather than only that something is.
 
 ---
 
-## 11. The whole thing in order
+## 12. The whole thing in order
 
-A book read as one document:
+**Shapes A and B — the exam belongs to the book.**
 
-1. `GET /api/books/{id}` — the document, and whether to show a quiz button
-2. `POST /api/books/{id}/read` — the reader opened it
+1. `GET /api/books/{id}` — the layout, the document, and whether to show a button
+2. `POST /api/books/{id}/read`, or `POST /api/sections/{id}/read` per section
 3. `GET /api/books/{id}/quiz` — the paper, plus any earlier attempts
 4. `POST /api/books/{id}/quiz` — the answers; back come the score, the points,
    any badges and certificates, and the new standing
 5. On a failure: back to 3 as often as the reader likes
-6. On a pass: the certificate and the badges are already in the feed
+6. On a pass: `completed` turns true, and the certificate and badges are already
+   in the feed
 
-A book read in sections, per section:
+**Shape C — the exam belongs to each section.**
 
-1. `GET /api/sections/{id}` — the section
+1. `GET /api/sections/{id}` — the section; `meta.book.has_own_quiz` confirms
+   which exam applies
 2. `POST /api/sections/{id}/read`
 3. `GET /api/sections/{id}/quiz`
 4. `POST /api/sections/{id}/quiz`

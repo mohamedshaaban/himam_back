@@ -55,19 +55,15 @@ class QuestionController extends Controller
     /**
      * Adds a question to the book itself rather than to one of its sections.
      *
-     * Refused for a book that has sections: the quiz is either per section or
-     * for the whole book, never both, or the points for finishing the material
-     * would be payable twice and "has this reader finished the book" would have
-     * two answers.
+     * Allowed whatever the book's layout. How a book is read and how it is
+     * examined are separate decisions: a book may be laid out in sections for
+     * the reading and still be examined once, over all of it. Writing the
+     * book's own questions is how an editor says so — the section quizzes stop
+     * being offered from that moment, so the points for finishing the material
+     * are still paid once and in one place.
      */
     public function bookStore(Request $request, Book $book): JsonResponse
     {
-        if ($book->sections()->exists()) {
-            throw ValidationException::withMessages([
-                'book' => [__('This book is read in sections, so its quiz belongs to the sections.')],
-            ]);
-        }
-
         $data = $this->validatePayload($request);
 
         $question = DB::transaction(function () use ($book, $data) {
