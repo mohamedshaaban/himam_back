@@ -50,6 +50,22 @@ fi
 # Uploaded images are served from storage/app/public via this symlink. It lives
 # on the container filesystem, so on an ephemeral host uploads vanish with the
 # instance — set MEDIA_DISK=s3 with the AWS_* variables to keep them.
+# A one-off data migration, and a decision rather than a deploy step: it moves
+# every book's exam from its sections onto the book itself. It runs only when
+# MOVE_EXAM_TO_BOOK is set, because no deploy should quietly rewrite how the
+# catalogue is examined.
+#
+# The command is idempotent — a book already examined as a whole is skipped, and
+# so is one with no questions to move — so leaving the variable set costs a few
+# queries per deploy and changes nothing. Remove it once it has run.
+#
+# A failure here must not stop the application booting: the old behaviour is
+# still correct, it is simply not what was asked for.
+if [ "${MOVE_EXAM_TO_BOOK:-false}" = "true" ]; then
+  echo "MOVE_EXAM_TO_BOOK is set — moving each book's exam onto the book."
+  php artisan himam:exam-on-book --no-interaction     || echo "WARNING: himam:exam-on-book failed. The catalogue is unchanged."
+fi
+
 php artisan storage:link --force || true
 
 # Sections point at the placeholder document by path, and on an ephemeral
