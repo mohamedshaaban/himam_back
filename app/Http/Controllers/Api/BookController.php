@@ -51,9 +51,12 @@ class BookController extends Controller
 
         $read = $request->user()?->readSectionIds() ?? [];
 
+        $bookHasOwnQuiz = $book->hasOwnQuiz();
+
         foreach ($book->sections as $section) {
             $section->readerPassed = in_array($section->id, $passed, true);
             $section->readerRead = in_array($section->id, $read, true);
+            $section->bookHasOwnQuiz = $bookHasOwnQuiz;
         }
 
         $this->attachProgress(collect([$book]), $request);

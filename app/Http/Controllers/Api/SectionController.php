@@ -55,6 +55,8 @@ class SectionController extends Controller
 
         $section->load('book')->loadCount('questions');
 
+        $section->bookHasOwnQuiz = $section->book->hasOwnQuiz();
+
         // Reading is recorded by POST /sections/{section}/read, not here. A GET
         // is the request a client is most free to repeat — a prefetch, a retry,
         // a cache warm — and none of those mean a reader has read anything.
