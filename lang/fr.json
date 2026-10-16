@@ -29,6 +29,8 @@
     "That page does not exist.": "Cette page n’existe pas.",
     "The current password is incorrect.": "Le mot de passe actuel est incorrect.",
     "These credentials do not match our records.": "Ces identifiants ne correspondent à aucun compte.",
+    "This book is examined as a whole, so its sections have no exam of their own.": "Ce livre est examiné d'un seul tenant ; ses parties n'ont pas d'examen propre.",
+    "This book is examined section by section, so it has no exam of its own.": "Ce livre est examiné partie par partie ; il n'a pas d'examen propre.",
     "This reset link is invalid or has expired. Please request a new one.": "Ce lien est invalide ou a expiré. Veuillez en demander un nouveau.",
     "User deleted.": "Utilisateur supprimé.",
     "You cannot delete your own account.": "Vous ne pouvez pas supprimer votre propre compte.",

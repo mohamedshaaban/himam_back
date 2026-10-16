@@ -34,7 +34,7 @@ class QuizController extends Controller
         // sections are then the way through the reading rather than five
         // separate examinations. 404 rather than an empty paper, so a client
         // cannot render a quiz that does not exist.
-        abort_if($section->book->hasOwnQuiz(), 404);
+        abort_if($section->book->hasOwnQuiz(), 404, __('This book is examined as a whole, so its sections have no exam of their own.'));
 
         $questions = $section->questions()->with('options')->get();
 
@@ -92,7 +92,7 @@ class QuizController extends Controller
         // sections are then the way through the reading rather than five
         // separate examinations. 404 rather than an empty paper, so a client
         // cannot render a quiz that does not exist.
-        abort_if($section->book->hasOwnQuiz(), 404);
+        abort_if($section->book->hasOwnQuiz(), 404, __('This book is examined as a whole, so its sections have no exam of their own.'));
 
         $validated = $request->validate([
             'answers' => ['required', 'array', 'min:1'],

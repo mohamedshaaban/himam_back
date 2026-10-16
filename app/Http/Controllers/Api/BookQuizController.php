@@ -37,7 +37,7 @@ class BookQuizController extends Controller
         // 404 rather than an empty quiz: a book read in sections has no
         // book-level quiz, and saying "here is nothing" invites a client to
         // render an empty exam.
-        abort_unless($book->hasOwnQuiz(), 404);
+        abort_unless($book->hasOwnQuiz(), 404, __('This book is examined section by section, so it has no exam of its own.'));
 
         $questions = $book->questions()->with('options')->get();
 
@@ -79,7 +79,7 @@ class BookQuizController extends Controller
         abort_unless($book->is_published, 404);
 
         $this->assertCanRead($request, $book);
-        abort_unless($book->hasOwnQuiz(), 404);
+        abort_unless($book->hasOwnQuiz(), 404, __('This book is examined section by section, so it has no exam of its own.'));
 
         $data = $request->validate([
             'answers' => ['present', 'array'],

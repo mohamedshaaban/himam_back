@@ -29,6 +29,8 @@
     "That page does not exist.": "هذه الصفحة غير موجودة.",
     "The current password is incorrect.": "كلمة المرور الحالية غير صحيحة.",
     "These credentials do not match our records.": "بيانات الدخول لا تطابق سجلاتنا.",
+    "This book is examined as a whole, so its sections have no exam of their own.": "هذا الكتاب يُختبر كاملاً، فليس لأقسامه اختبارات منفصلة.",
+    "This book is examined section by section, so it has no exam of its own.": "هذا الكتاب يُختبر على أقسامه، فليس له اختبار على الكتاب كاملاً.",
     "This reset link is invalid or has expired. Please request a new one.": "رابط الاستعادة غير صالح أو انتهت صلاحيته. يُرجى طلب رابط جديد.",
     "User deleted.": "تم حذف المستخدم.",
     "You cannot delete your own account.": "لا يمكنك حذف حسابك.",
