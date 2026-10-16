@@ -39,7 +39,6 @@ class SectionController extends Controller
             'data' => [
                 'id' => $section->id,
                 'read' => true,
-                'passed' => in_array($section->id, $user->passedSectionIds(), true),
             ],
         ]);
     }
@@ -55,8 +54,6 @@ class SectionController extends Controller
 
         $section->load('book')->loadCount('questions');
 
-        $section->bookHasOwnQuiz = $section->book->hasOwnQuiz();
-
         // Reading is recorded by POST /sections/{section}/read, not here. A GET
         // is the request a client is most free to repeat — a prefetch, a retry,
         // a cache warm — and none of those mean a reader has read anything.
@@ -66,7 +63,6 @@ class SectionController extends Controller
                 ->whereNotNull('read_at')
                 ->exists();
 
-            $section->readerPassed = in_array($section->id, $user->passedSectionIds(), true);
         }
 
         return (new SectionResource($section))->additional([

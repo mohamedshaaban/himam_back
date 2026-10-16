@@ -37,7 +37,9 @@ class BookQuizController extends Controller
         // 404 rather than an empty quiz: a book read in sections has no
         // book-level quiz, and saying "here is nothing" invites a client to
         // render an empty exam.
-        abort_unless($book->hasOwnQuiz(), 404, __('This book is examined section by section, so it has no exam of its own.'));
+        abort_unless($book->hasOwnQuiz(), 404, __('No exam has been written for this book yet.'));
+
+        $this->assertFullyRead($request, $book);
 
         $questions = $book->questions()->with('options')->get();
 
@@ -79,7 +81,9 @@ class BookQuizController extends Controller
         abort_unless($book->isAvailable(), 404);
 
         $this->assertCanRead($request, $book);
-        abort_unless($book->hasOwnQuiz(), 404, __('This book is examined section by section, so it has no exam of its own.'));
+        abort_unless($book->hasOwnQuiz(), 404, __('No exam has been written for this book yet.'));
+
+        $this->assertFullyRead($request, $book);
 
         $data = $request->validate([
             'answers' => ['present', 'array'],
@@ -111,6 +115,27 @@ class BookQuizController extends Controller
             'new_certificates' => CertificateResource::collection($result['new_certificates']),
             'stats' => $this->progress->stats($request->user()->refresh()),
         ]);
+    }
+
+    /**
+     * Refuses the exam until the book has been read.
+     *
+     * The same rule the quiz_button flag reports, enforced here as well. A
+     * flag a client can ignore is not a rule, and this one decides when points
+     * and a certificate become reachable — so it cannot live in the interface
+     * alone, any more than the programme lock can.
+     */
+    private function assertFullyRead(Request $request, Book $book): void
+    {
+        $user = $request->user();
+
+        $read = $book->fullyReadBy(
+            $user->readSectionIds(),
+            $user->readBookIds(),
+            $book->sections()->pluck('id')
+        );
+
+        abort_unless($read, 403, __('Read the whole book before sitting its exam.'));
     }
 
     /**

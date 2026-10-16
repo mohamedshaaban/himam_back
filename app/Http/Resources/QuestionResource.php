@@ -9,7 +9,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * Reader-facing shape of a quiz question.
  *
  * `is_correct` is deliberately absent — the answer key never leaves the server
- * on this endpoint. Grading happens in QuizController::submit, which returns
+ * on this endpoint. Grading happens in BookQuizController::submit, which returns
  * the correct option ids only after the attempt has been recorded.
  */
 class QuestionResource extends JsonResource

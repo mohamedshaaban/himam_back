@@ -13,7 +13,7 @@ class BadgeController extends Controller
 {
     use HandlesTranslatableInput;
 
-    private const CRITERIA = ['manual', 'sections_passed', 'books_completed', 'points'];
+    private const CRITERIA = ['manual', 'sections_read', 'books_completed', 'points'];
 
     public function index(): JsonResponse
     {

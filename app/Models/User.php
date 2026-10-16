@@ -108,8 +108,8 @@ class User extends Authenticatable
     /**
      * Books passed by their own quiz — the books that have no sections.
      *
-     * Kept beside passedSectionIds() because "finished this book" now has two
-     * shapes, and every rule that counts progress has to accept both.
+     * A book is finished by passing its own exam, and nothing else — so this
+     * is the list every completion rule consults.
      */
     /**
      * This reader's progress rows, read once per request.
@@ -148,10 +148,21 @@ class User extends Authenticatable
     /**
      * The sections this reader has opened.
      *
-     * Separate from passedSectionIds(): a reader who has read every section of
-     * a book examined as a whole has passed none of them, and the book screen
-     * still needs to show how far through the reading they are.
+     * Sections are read, not passed: the exam is the book's. This is what the
+     * book screen measures, and what unlocks that exam.
      */
+    /**
+     * Books this reader has opened, for the ones that are one document and so
+     * have no sections to count.
+     */
+    public function readBookIds(): array
+    {
+        return $this->progressRows()
+            ->filter(fn ($row) => $row->book_id !== null && $row->read_at !== null)
+            ->pluck('book_id')
+            ->all();
+    }
+
     public function readSectionIds(): array
     {
         return $this->progressRows()
@@ -160,15 +171,4 @@ class User extends Authenticatable
             ->all();
     }
 
-    public function passedSectionIds(): array
-    {
-        // A progress row keyed on a book rather than a section has no section
-        // id, and without this filter its null came back as a "passed section":
-        // the counter on the home screen ran ahead, and a badge for passing
-        // one's first section was awarded for passing a whole book.
-        return $this->progressRows()
-            ->filter(fn ($row) => $row->book_section_id !== null && $row->passed_at !== null)
-            ->pluck('book_section_id')
-            ->all();
-    }
 }

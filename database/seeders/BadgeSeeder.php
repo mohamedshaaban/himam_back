@@ -21,7 +21,7 @@ class BadgeSeeder extends Seeder
                     'Vous avez validé votre première section du programme.',
                     'آپ نے پروگرام کا پہلا حصہ مکمل کر لیا۔',
                 ),
-                'criteria_type' => 'sections_passed',
+                'criteria_type' => 'sections_read',
                 'criteria_value' => 1,
             ],
             [
@@ -32,7 +32,7 @@ class BadgeSeeder extends Seeder
                     'Cinq sections validées.',
                     'پانچ حصے کامیابی سے مکمل کیے۔',
                 ),
-                'criteria_type' => 'sections_passed',
+                'criteria_type' => 'sections_read',
                 'criteria_value' => 5,
             ],
             [

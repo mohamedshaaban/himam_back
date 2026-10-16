@@ -74,13 +74,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // is something a client may repeat freely, and none of those repeats mean
     // the reader read it.
     Route::post('sections/{section}/read', [Api\SectionController::class, 'markRead']);
-    // A book without sections is read and examined as a whole.
+    // Reading the whole book is what unlocks its exam.
     Route::post('books/{book}/read', [Api\BookQuizController::class, 'markRead']);
     Route::get('books/{book}/quiz', [Api\BookQuizController::class, 'show']);
     Route::post('books/{book}/quiz', [Api\BookQuizController::class, 'submit']);
 
-    Route::get('sections/{section}/quiz', [Api\QuizController::class, 'show']);
-    Route::post('sections/{section}/quiz', [Api\QuizController::class, 'submit']);
 
     Route::get('certificates', [Api\CertificateController::class, 'index']);
     Route::get('certificates/available', [Api\CertificateController::class, 'available']);
@@ -118,13 +116,10 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
     Route::put('sections/{section}', [Admin\SectionController::class, 'update']);
     Route::delete('sections/{section}', [Admin\SectionController::class, 'destroy']);
 
-    // A book examined as a whole carries its own questions; one read in
-    // sections carries them on the sections instead.
+    // Questions belong to the book. The exam covers the whole of it, so there
+    // is nowhere else for them to live.
     Route::get('books/{book}/questions', [Admin\QuestionController::class, 'bookIndex']);
     Route::post('books/{book}/questions', [Admin\QuestionController::class, 'bookStore']);
-
-    Route::get('sections/{section}/questions', [Admin\QuestionController::class, 'index']);
-    Route::post('sections/{section}/questions', [Admin\QuestionController::class, 'store']);
     Route::put('questions/{question}', [Admin\QuestionController::class, 'update']);
     Route::delete('questions/{question}', [Admin\QuestionController::class, 'destroy']);
 

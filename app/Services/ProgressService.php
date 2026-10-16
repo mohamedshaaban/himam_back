@@ -241,7 +241,7 @@ class ProgressService
             ->get()
             ->filter(function (Badge $badge) use ($stats) {
                 $actual = match ($badge->criteria_type) {
-                    'sections_passed' => $stats['sections_passed'],
+                    'sections_read' => $stats['sections_read'],
                     'books_completed' => $stats['books_completed'],
                     'points' => $stats['points'],
                     default => null,
@@ -269,10 +269,9 @@ class ProgressService
      */
     public function issueEarnedCertificates(User $user): \Illuminate\Support\Collection
     {
-        $passedSectionIds = $user->passedSectionIds();
         $passedBookIds = $user->passedBookIds();
 
-        $issued = $this->issueBookCertificates($user, $passedSectionIds, $passedBookIds);
+        $issued = $this->issueBookCertificates($user, $passedBookIds);
 
         $held = $user->certificates()->whereNotNull('level_id')->get()->keyBy('level_id');
 
@@ -289,7 +288,7 @@ class ProgressService
             }
 
             $unfinished = $books->first(
-                fn (Book $book) => ! $book->completedBy($passedSectionIds, $passedBookIds)
+                fn (Book $book) => ! $book->completedBy($passedBookIds)
             );
 
             if ($unfinished) {
@@ -321,11 +320,10 @@ class ProgressService
      * with neither sections nor questions cannot be finished, so it never
      * issues one.
      *
-     * @param  array<int,int>  $passedSectionIds
      * @param  array<int,int>  $passedBookIds
      * @return \Illuminate\Support\Collection<int, Certificate>
      */
-    private function issueBookCertificates(User $user, array $passedSectionIds, array $passedBookIds): \Illuminate\Support\Collection
+    private function issueBookCertificates(User $user, array $passedBookIds): \Illuminate\Support\Collection
     {
         $held = $user->certificates()->whereNotNull('book_id')->get()->keyBy('book_id');
 
@@ -334,7 +332,7 @@ class ProgressService
         $books = Book::published()->with('sections:id,book_id')->withCount('questions')->get();
 
         foreach ($books as $book) {
-            if (! $book->completedBy($passedSectionIds, $passedBookIds)) {
+            if (! $book->completedBy($passedBookIds)) {
                 continue;
             }
 
@@ -487,7 +485,6 @@ class ProgressService
      */
     public function stats(User $user, ?\Illuminate\Support\Collection $books = null): array
     {
-        $passedSectionIds = $user->passedSectionIds();
         $passedBookIds = $user->passedBookIds();
 
         // Counted over the books a reader is actually shown: published, and on
@@ -508,15 +505,15 @@ class ProgressService
         $sectionIds = $books->flatMap->sections->pluck('id');
 
         $booksCompleted = $books
-            ->filter(fn (Book $book) => $book->completedBy($passedSectionIds, $passedBookIds))
+            ->filter(fn (Book $book) => $book->completedBy($passedBookIds))
             ->count();
 
         return [
             'points' => (int) $user->points,
 
-            // Passes on a withdrawn level leave the numerator with the
+            // Reading on a withdrawn level leaves the numerator with the
             // denominator; a certificate already issued for one still stands.
-            'sections_passed' => $sectionIds->intersect($passedSectionIds)->count(),
+            'sections_read' => $sectionIds->intersect($user->readSectionIds())->count(),
             'sections_total' => $sectionIds->count(),
             'books_completed' => $booksCompleted,
             'books_total' => $books->count(),
@@ -543,7 +540,6 @@ class ProgressService
         $attempts = $allAttempts->groupBy('book_section_id');
         $certificates = $user->certificates()->whereNotNull('level_id')->get()->keyBy('level_id');
 
-        $passedSectionIds = $user->passedSectionIds();
         $passedBookIds = $user->passedBookIds();
 
         $levels = Level::query()
@@ -553,26 +549,20 @@ class ProgressService
             ->orderBy('position')
             ->get();
 
-        $levelPayload = $levels->map(function (Level $level) use ($progressRows, $attempts, $certificates, $passedSectionIds, $passedBookIds) {
-            $books = $level->books->map(function (Book $book) use ($progressRows, $attempts, $passedSectionIds, $passedBookIds) {
+        $levelPayload = $levels->map(function (Level $level) use ($progressRows, $attempts, $certificates, $passedBookIds) {
+            $books = $level->books->map(function (Book $book) use ($progressRows, $attempts, $passedBookIds) {
                 $sections = $book->sections->map(function (BookSection $section) use ($progressRows, $attempts) {
                     $row = $progressRows->get($section->id);
-                    $tries = $attempts->get($section->id, collect());
 
                     return [
                         'id' => $section->id,
                         'title' => $section->t('title'),
                         'position' => $section->position,
                         'read' => (bool) $row?->read_at,
-                        'passed' => (bool) $row?->passed_at,
-                        'attempts' => $tries->count(),
-                        'best_score' => $tries->max('score'),
-                        'questions' => $section->questions_count,
-                        'passed_at' => $row?->passed_at?->toDateString(),
+                        'read_at' => $row?->read_at?->toDateString(),
                     ];
                 })->values();
 
-                $passed = $sections->where('passed', true)->count();
                 $read = $sections->where('read', true)->count();
                 $total = $sections->count();
 
@@ -584,16 +574,14 @@ class ProgressService
                     'has_own_quiz' => $book->hasOwnQuiz(),
                     'sections_total' => $total,
                     'sections_read' => $read,
-                    'sections_passed' => $passed,
                     'read_percent' => $total > 0 ? (int) round($read / $total * 100) : 0,
-                    'percent' => $total > 0 ? (int) round($passed / $total * 100) : 0,
-                    'completed' => $book->completedBy($passedSectionIds, $passedBookIds),
+                    'completed' => $book->completedBy($passedBookIds),
                     'sections' => $sections,
                 ];
             })->values();
 
             $sectionsTotal = $books->sum('sections_total');
-            $sectionsPassed = $books->sum('sections_passed');
+            $sectionsRead = $books->sum('sections_read');
             $certificate = $certificates->get($level->id);
 
             return [
@@ -602,8 +590,8 @@ class ProgressService
                 'books_total' => $books->count(),
                 'books_completed' => $books->where('completed', true)->count(),
                 'sections_total' => $sectionsTotal,
-                'sections_passed' => $sectionsPassed,
-                'percent' => $sectionsTotal > 0 ? (int) round($sectionsPassed / $sectionsTotal * 100) : 0,
+                'sections_read' => $sectionsRead,
+                'read_percent' => $sectionsTotal > 0 ? (int) round($sectionsRead / $sectionsTotal * 100) : 0,
                 'certificate' => $certificate ? [
                     'id' => $certificate->id,
                     'serial' => $certificate->serial,
@@ -644,7 +632,7 @@ class ProgressService
             ->get()
             ->map(function (Badge $badge) use ($stats) {
                 $current = match ($badge->criteria_type) {
-                    'sections_passed' => $stats['sections_passed'],
+                    'sections_read' => $stats['sections_read'],
                     'books_completed' => $stats['books_completed'],
                     'points' => $stats['points'],
                     default => 0,

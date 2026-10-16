@@ -73,9 +73,8 @@ class HonorBoardController extends Controller
 
     private function booksCompleted(User $user, \Illuminate\Support\Collection $books, \Illuminate\Support\Collection $passes): int
     {
-        $passed = $passes->whereNotNull('book_section_id')->pluck('book_section_id')->all();
         $passedBooks = $passes->whereNotNull('book_id')->pluck('book_id')->all();
 
-        return $books->filter(fn ($book) => $book->completedBy($passed, $passedBooks))->count();
+        return $books->filter(fn ($book) => $book->completedBy($passedBooks))->count();
     }
 }

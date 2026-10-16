@@ -48,7 +48,10 @@ class UserSeeder extends Seeder
             ['name' => 'يوسف الشمري', 'email' => 'yousef@himam.test', 'avatar' => 'assets/avatar-2.svg', 'level' => 1, 'sections' => 5],
         ];
 
-        $sections = BookSection::with('questions.options')
+        // The book comes along with each section: workThrough() needs its
+        // sections to know when a book is finished, and its questions to sit
+        // the exam.
+        $sections = BookSection::with(['book.questions.options', 'book.sections:id,book_id'])
             ->join('books', 'books.id', '=', 'book_sections.book_id')
             ->orderBy('books.position')
             ->orderBy('book_sections.position')
@@ -65,9 +68,7 @@ class UserSeeder extends Seeder
                 'level_id' => $levels[$student['level'] - 1]->id ?? null,
             ]);
 
-            foreach ($sections->take($student['sections']) as $section) {
-                $this->passSection($user, $section);
-            }
+            $this->workThrough($user, $sections->take($student['sections']));
         }
     }
 
@@ -88,22 +89,38 @@ class UserSeeder extends Seeder
     }
 
     /**
-     * Answers every question correctly and submits, so the attempt goes through
-     * the same grading path a real reader would take.
+     * Reads these sections, and sits the exam of every book finished along the
+     * way — the same path a real reader takes, through the same service, so
+     * the demo accounts carry real attempts, points, badges and certificates.
+     *
+     * A book only counts as finished when every one of its sections is in the
+     * list, which is also what unlocks its exam.
+     *
+     * @param  \Illuminate\Support\Collection<int, BookSection>  $sections
      */
-    private function passSection(User $user, BookSection $section): void
+    private function workThrough(User $user, $sections): void
     {
-        $answers = $section->questions
-            ->mapWithKeys(fn ($question) => [
-                $question->id => $question->options->firstWhere('is_correct', true)?->id,
-            ])
-            ->filter()
-            ->all();
-
-        if ($answers === []) {
-            return;
+        foreach ($sections as $section) {
+            $this->progress->markRead($user, $section);
         }
 
-        $this->progress->submitQuiz($user, $section, $answers);
+        $readIds = $sections->pluck('id');
+
+        foreach ($sections->pluck('book')->unique('id')->filter() as $book) {
+            if ($book->sections->pluck('id')->diff($readIds)->isNotEmpty()) {
+                continue;
+            }
+
+            $answers = $book->questions
+                ->mapWithKeys(fn ($question) => [
+                    $question->id => $question->options->firstWhere('is_correct', true)?->id,
+                ])
+                ->filter()
+                ->all();
+
+            if ($answers !== []) {
+                $this->progress->submitBookQuiz($user, $book, $answers);
+            }
+        }
     }
 }

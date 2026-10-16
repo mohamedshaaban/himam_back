@@ -25,11 +25,10 @@ class BookResource extends JsonResource
             // Whether to offer the exam, and what the button says, are set in
             // the dashboard — the client renders what it is told rather than
             // deciding for itself.
+            // The one flag that says whether to offer the exam, and why not
+            // when it is shut. There is nothing else to consult: the exam is
+            // always the book's, so there is no scope left to vary.
             'quiz_button' => $this->quizButton(),
-
-            // Where the exam lives, so a client is told rather than left to
-            // infer it from section counts and a hidden button.
-            'exam' => $this->examSummary(),
             'pages' => $this->pages,
             'points' => $this->points,
             'position' => $this->position,

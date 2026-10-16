@@ -39,11 +39,11 @@ class ProgramAccess
      * Books in one programme, each with whether it is open and what is blocking
      * it. Order follows the programme's own order_index.
      *
-     * @return array<int, array{book: Book, unlocked: bool, status: string, reason: ?int, completed: bool, sections_passed: int, sections_total: int}>
+     * @return array<int, array{book: Book, unlocked: bool, status: string, reason: ?int, completed: bool, sections_read: int, sections_total: int}>
      */
     public function books(Program $program, ?User $user): array
     {
-        $passed = $user ? $user->passedSectionIds() : [];
+        $readSections = $user ? $user->readSectionIds() : [];
         $passedBooks = $user ? $user->passedBookIds() : [];
         $books = $program->relationLoaded('books')
             ? $program->books
@@ -56,9 +56,9 @@ class ProgramAccess
         foreach ($books as $book) {
             $sectionIds = $book->sections->pluck('id');
             $total = $sectionIds->count();
-            $done = $sectionIds->intersect($passed)->count();
+            $read = $sectionIds->intersect($readSections)->count();
 
-            $completed = $book->completedBy($passed, $passedBooks);
+            $completed = $book->completedBy($passedBooks);
 
             // A book the reader has already finished stays open even if the
             // one now before it has not been. Reordering a programme must not
@@ -70,10 +70,10 @@ class ProgramAccess
             $rows[] = [
                 'book' => $book,
                 'unlocked' => $unlocked,
-                'status' => $this->status($unlocked, $completed, $done),
+                'status' => $this->status($unlocked, $completed, $read),
                 'blocked_by' => $unlocked ? null : $previousBookId,
                 'completed' => $completed,
-                'sections_passed' => $done,
+                'sections_read' => $read,
                 'sections_total' => $total,
             ];
 
@@ -139,7 +139,7 @@ class ProgramAccess
         return self::LOCKED_PREVIOUS;
     }
 
-    private function status(bool $unlocked, bool $completed, int $done): string
+    private function status(bool $unlocked, bool $completed, int $read): string
     {
         if (! $unlocked) {
             return 'locked';
@@ -149,6 +149,6 @@ class ProgramAccess
             return 'completed';
         }
 
-        return $done > 0 ? 'in_progress' : 'available';
+        return $read > 0 ? 'in_progress' : 'available';
     }
 }

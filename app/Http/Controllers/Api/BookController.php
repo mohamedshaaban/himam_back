@@ -18,13 +18,7 @@ class BookController extends Controller
     {
         $books = Book::published()
             ->with('level')
-            // sections_with_quiz_count keeps examSummary() to one query for the
-            // whole index rather than one per book.
-            ->withCount([
-                'sections',
-                'questions',
-                'sections as sections_with_quiz_count' => fn ($q) => $q->whereHas('questions'),
-            ])
+            ->withCount(['sections', 'questions'])
             ->when($request->filled('level_id'), fn ($q) => $q->where('level_id', $request->integer('level_id')))
             ->orderBy('position')
             ->get();
@@ -47,16 +41,14 @@ class BookController extends Controller
         $book->load(['sections' => fn ($q) => $q->withCount('questions')])
             ->loadCount('questions');
 
-        $passed = $request->user()?->passedSectionIds() ?? [];
-
         $read = $request->user()?->readSectionIds() ?? [];
 
-        $bookHasOwnQuiz = $book->hasOwnQuiz();
+        $book->readerFullyRead = $request->user()
+            ? $book->fullyReadBy($read, $request->user()->readBookIds(), $book->sections->pluck('id'))
+            : null;
 
         foreach ($book->sections as $section) {
-            $section->readerPassed = in_array($section->id, $passed, true);
             $section->readerRead = in_array($section->id, $read, true);
-            $section->bookHasOwnQuiz = $bookHasOwnQuiz;
         }
 
         $this->attachProgress(collect([$book]), $request);
@@ -76,9 +68,9 @@ class BookController extends Controller
             return;
         }
 
-        $passed = $user->passedSectionIds();
         $passedBooks = $user->passedBookIds();
         $readSections = $user->readSectionIds();
+        $readBooks = $user->readBookIds();
 
         // One query for every book's section ids, rather than one per book.
         // On a database in another region each of those round trips costs more
@@ -103,21 +95,20 @@ class BookController extends Controller
             $sectionIds = $sectionsFor($book);
 
             $total = $sectionIds->count();
-            $done = $sectionIds->intersect($passed)->count();
             $read = $sectionIds->intersect($readSections)->count();
 
-            // Reading and passing are reported side by side rather than folded
-            // into one number. When the exam is the book's own there are no
-            // section passes to count, and a reader who has read every section
-            // would otherwise sit at 0% with nothing to show for it.
+            // Sections are read, not passed — the exam is the book's. So the
+            // only section-level measure is how much has been read, and
+            // `completed` answers whether the book itself is done.
             $book->readerProgress = [
                 'sections_total' => $total,
                 'sections_read' => $read,
-                'sections_passed' => $done,
                 'read_percent' => $total > 0 ? (int) round($read / $total * 100) : 0,
-                'percent' => $total > 0 ? (int) round($done / $total * 100) : 0,
-                'completed' => $book->completedBy($passed, $passedBooks, $sectionIds),
+                'completed' => $book->completedBy($passedBooks),
             ];
+
+            // What the exam button hangs on: the whole book read, not part.
+            $book->readerFullyRead = $book->fullyReadBy($readSections, $readBooks, $sectionIds);
         }
     }
 }

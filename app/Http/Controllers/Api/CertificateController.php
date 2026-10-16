@@ -28,7 +28,7 @@ class CertificateController extends Controller
     public function available(Request $request): JsonResponse
     {
         $user = $request->user();
-        $passed = $user->passedSectionIds();
+        $read = $user->readSectionIds();
         $passedBooks = $user->passedBookIds();
 
         $heldLevels = $user->certificates()->whereNotNull('level_id')->get()->keyBy('level_id');
@@ -43,10 +43,10 @@ class CertificateController extends Controller
             ->orderBy('id')
             ->get();
 
-        $bookRows = $books->map(function (\App\Models\Book $book) use ($passed, $passedBooks, $heldBooks) {
+        $bookRows = $books->map(function (\App\Models\Book $book) use ($read, $passedBooks, $heldBooks) {
             $sectionIds = $book->sections->pluck('id');
             $total = $sectionIds->count();
-            $done = $sectionIds->intersect($passed)->count();
+            $done = $sectionIds->intersect($read)->count();
 
             // A book examined as a whole has no sections to count, so it is one
             // step: taken or not.
@@ -71,11 +71,11 @@ class CertificateController extends Controller
             ->orderBy('position')
             ->get();
 
-        $levelRows = $levels->map(function ($level) use ($passed, $passedBooks, $heldLevels) {
+        $levelRows = $levels->map(function ($level) use ($read, $passedBooks, $heldLevels) {
             $books = $level->books;
             $sectionIds = $books->flatMap->sections->pluck('id');
 
-            $done = $sectionIds->intersect($passed)->count();
+            $done = $sectionIds->intersect($read)->count();
             $total = $sectionIds->count();
 
             // Books examined as a whole contribute one step each, the same way
@@ -113,7 +113,7 @@ class CertificateController extends Controller
             'verification_url' => $certificate
                 ? url("/api/certificates/verify/{$certificate->verification_code}")
                 : null,
-            'sections_passed' => $done,
+            'sections_read' => $done,
             'sections_total' => $total,
             'percent' => $total > 0 ? (int) round($done / $total * 100) : 0,
         ];

@@ -76,7 +76,7 @@ class ProgramController extends Controller
             'status' => $row['status'],
             'blocked_by' => $row['blocked_by'],
             'completed' => $row['completed'],
-            'sections_passed' => $row['sections_passed'],
+            'sections_read' => $row['sections_read'],
             'sections_total' => $row['sections_total'],
         ]);
 
@@ -155,8 +155,8 @@ class ProgramController extends Controller
     private function percent(array $rows): int
     {
         $total = array_sum(array_column($rows, 'sections_total'));
-        $done = array_sum(array_column($rows, 'sections_passed'));
+        $read = array_sum(array_column($rows, 'sections_read'));
 
-        return $total > 0 ? (int) round($done / $total * 100) : 0;
+        return $total > 0 ? (int) round($read / $total * 100) : 0;
     }
 }

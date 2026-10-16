@@ -230,15 +230,17 @@ class ContentSeeder extends Seeder
         $pdf = $this->samplePdf();
 
         foreach ($titles as $index => $title) {
-            $section = $book->sections()->create([
+            $book->sections()->create([
                 'title' => $title,
                 'body' => $this->sectionBody(),
                 'pdf' => $pdf,
                 'position' => $index + 1,
             ]);
-
-            $this->seedQuestions($section, $index);
         }
+
+        // The sections are the way through the reading; the examination is one
+        // paper over all of it, so the questions hang off the book.
+        $this->seedQuestions($book);
     }
 
     /**
@@ -275,23 +277,27 @@ class ContentSeeder extends Seeder
     }
 
     /**
-     * Three questions per section, varying by the section's position so the
-     * quizzes track the section that precedes them.
+     * The book's exam: nine questions in reading order, three drawn from the
+     * material of each section.
      */
-    private function seedQuestions(BookSection $section, int $sectionIndex): void
+    private function seedQuestions(Book $book): void
     {
-        foreach ($this->questionBank()[$sectionIndex] as $position => $question) {
-            $created = $section->questions()->create([
-                'text' => $question['text'],
-                'position' => $position,
-            ]);
+        $position = 0;
 
-            foreach ($question['options'] as $optionPosition => $option) {
-                $created->options()->create([
-                    'text' => $option['text'],
-                    'is_correct' => $option['correct'] ?? false,
-                    'position' => $optionPosition,
+        foreach ($this->questionBank() as $fromSection) {
+            foreach ($fromSection as $question) {
+                $created = $book->questions()->create([
+                    'text' => $question['text'],
+                    'position' => ++$position,
                 ]);
+
+                foreach ($question['options'] as $optionPosition => $option) {
+                    $created->options()->create([
+                        'text' => $option['text'],
+                        'is_correct' => $option['correct'] ?? false,
+                        'position' => $optionPosition,
+                    ]);
+                }
             }
         }
     }

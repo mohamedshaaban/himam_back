@@ -51,6 +51,12 @@ class Book extends Model
      * this scope, so a withdrawn book is still there to be edited and
      * reinstated.
      */
+    /**
+     * Set per request by whichever controller resolved this reader's progress.
+     * Null when nobody is signed in, which is not the same as "not finished".
+     */
+    public ?bool $readerFullyRead = null;
+
     public function scopePublished(Builder $query): Builder
     {
         return $query->where('is_published', true)
@@ -116,35 +122,16 @@ class Book extends Model
      *
      * One rule in one place. It was five, and one of them had already drifted.
      *
-     * A book with its own exam is finished by passing it, however it is laid
-     * out — sections are then the way through the reading, not five separate
-     * examinations. A book without one is finished by passing every section.
-     * A book with neither cannot be finished at all, and must not become a wall
-     * the rest of a programme sits behind.
+     * By passing its exam, and only that. The exam covers the whole book, so
+     * there is nothing else that could finish it: sections are the way through
+     * the reading, and a book whose questions have not been written yet cannot
+     * be finished at all.
      *
-     * @param  array<int,int>  $passedSectionIds
      * @param  array<int,int>  $passedBookIds
      */
-    public function completedBy(array $passedSectionIds, array $passedBookIds, $sectionIds = null): bool
+    public function completedBy(array $passedBookIds): bool
     {
-        if ($this->hasOwnQuiz()) {
-            return in_array($this->id, $passedBookIds, true);
-        }
-
-        // A caller holding a list of books usually knows the section ids
-        // already; making this go and fetch them again turned one query into
-        // one per book.
-        $sectionIds ??= $this->relationLoaded('sections')
-            ? $this->sections->pluck('id')
-            : $this->sections()->pluck('id');
-
-        $sectionIds = collect($sectionIds);
-
-        if ($sectionIds->isEmpty()) {
-            return false;
-        }
-
-        return $sectionIds->diff($passedSectionIds)->isEmpty();
+        return in_array($this->id, $passedBookIds, true);
     }
 
     /**
@@ -157,68 +144,66 @@ class Book extends Model
      * The label falls back to the translated default, so a book that has
      * nothing special to say still gets correct wording in every language.
      */
+    /**
+     * The one flag that decides whether the exam is offered.
+     *
+     * Three things have to be true, and `reason` names the first that is not,
+     * so a screen can say why the button is absent instead of leaving a reader
+     * to guess:
+     *
+     *   no_questions    the exam has not been written yet
+     *   hidden          an editor has turned it off
+     *   not_signed_in   nobody to examine
+     *   unread          the reading is not finished
+     *
+     * The reading requirement is the point: the exam covers the whole book, so
+     * it is offered once the whole book has been read. `readerFullyRead` is set
+     * by the controller, which already knows how much of this book the reader
+     * has opened; without it this cannot be answered and the button stays shut.
+     */
     public function quizButton(): array
     {
-        $hasQuestions = $this->hasOwnQuiz();
+        $label = $this->t('quiz_button_label') ?: __('Take the quiz');
+
+        $reason = match (true) {
+            ! $this->hasOwnQuiz() => 'no_questions',
+            ! $this->quiz_button_visible => 'hidden',
+            $this->readerFullyRead === null => 'not_signed_in',
+            $this->readerFullyRead === false => 'unread',
+            default => null,
+        };
 
         return [
-            'visible' => $hasQuestions && (bool) $this->quiz_button_visible,
-            'label' => $this->t('quiz_button_label') ?: __('Take the quiz'),
+            'visible' => $reason === null,
+            'label' => $label,
+            'reason' => $reason,
         ];
     }
 
     /**
-     * Where this book's examination lives, said plainly.
+     * Whether this reader has read the whole book.
      *
-     * A client should not have to work this out from the shape of the payload —
-     * counting sections, noticing an empty questions_count, inferring that a
-     * hidden button means the exam is somewhere else. It asks here and is told.
+     * Every section opened, or — for a book that is one document — the book
+     * itself opened. A book with neither sections nor a document cannot be
+     * read through, so it is never finished.
      *
-     *   book     one exam over the whole book, at /books/{id}/quiz
-     *   sections one exam per section, at /sections/{id}/quiz
-     *   none     no questions have been written yet
+     * @param  array<int,int>  $readSectionIds
+     * @param  array<int,int>  $readBookIds
+     * @param  \Illuminate\Support\Collection|array|null  $sectionIds  when the caller has them
      */
-    public function examSummary(): array
+    public function fullyReadBy(array $readSectionIds, array $readBookIds, $sectionIds = null): bool
     {
-        if ($this->hasOwnQuiz()) {
-            return [
-                'scope' => 'book',
-                'button' => $this->quizButton(),
+        $sectionIds = collect($sectionIds ?? ($this->relationLoaded('sections')
+            ? $this->sections->pluck('id')
+            : $this->sections()->pluck('id')));
 
-                // hasOwnQuiz() just established this from a count the query
-                // already asked for; counting again would be a round trip for
-                // a number in hand.
-                'questions_total' => $this->questions_count
-                    ?? ($this->relationLoaded('questions')
-                        ? $this->questions->count()
-                        : $this->questions()->count()),
-            ];
+        if ($sectionIds->isNotEmpty()) {
+            return $sectionIds->diff($readSectionIds)->isEmpty();
         }
 
-        // Three ways to know, cheapest first: a count the query asked for, the
-        // sections already loaded with their own counts, and only failing both
-        // a query of its own.
-        if (isset($this->sections_with_quiz_count)) {
-            $sectionsWithQuiz = (int) $this->sections_with_quiz_count;
-        } elseif ($this->relationLoaded('sections')) {
-            $sectionsWithQuiz = $this->sections->filter(
-                fn ($section) => isset($section->questions_count)
-                    ? $section->questions_count > 0
-                    : $section->questions()->exists()
-            )->count();
-        } else {
-            $sectionsWithQuiz = $this->sections()->whereHas('questions')->count();
-        }
-
-        return [
-            'scope' => $sectionsWithQuiz > 0 ? 'sections' : 'none',
-
-            // There is no book-level button in either case, and saying so beats
-            // leaving the field out and making a client guess.
-            'button' => ['visible' => false, 'label' => $this->t('quiz_button_label') ?: __('Take the quiz')],
-            'sections_with_quiz' => $sectionsWithQuiz,
-        ];
+        return in_array($this->id, $readBookIds, true);
     }
+
 
     /** The reading programmes this book appears in, if any. */
     public function programs(): BelongsToMany
