@@ -97,15 +97,20 @@ class Book extends Model
      * @param  array<int,int>  $passedSectionIds
      * @param  array<int,int>  $passedBookIds
      */
-    public function completedBy(array $passedSectionIds, array $passedBookIds): bool
+    public function completedBy(array $passedSectionIds, array $passedBookIds, $sectionIds = null): bool
     {
         if ($this->hasOwnQuiz()) {
             return in_array($this->id, $passedBookIds, true);
         }
 
-        $sectionIds = $this->relationLoaded('sections')
+        // A caller holding a list of books usually knows the section ids
+        // already; making this go and fetch them again turned one query into
+        // one per book.
+        $sectionIds ??= $this->relationLoaded('sections')
             ? $this->sections->pluck('id')
             : $this->sections()->pluck('id');
+
+        $sectionIds = collect($sectionIds);
 
         if ($sectionIds->isEmpty()) {
             return false;

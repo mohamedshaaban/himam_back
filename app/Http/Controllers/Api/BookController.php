@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Api\Concerns\EnforcesProgramAccess;
 use App\Http\Resources\BookResource;
 use App\Models\Book;
+use App\Models\BookSection;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -72,10 +73,27 @@ class BookController extends Controller
         $passedBooks = $user->passedBookIds();
         $readSections = $user->readSectionIds();
 
+        // One query for every book's section ids, rather than one per book.
+        // On a database in another region each of those round trips costs more
+        // than the work it does, and the catalogue index was paying fourteen of
+        // them to answer a question one query can.
+        $sectionIdsByBook = $books->contains(fn ($book) => ! $book->relationLoaded('sections'))
+            ? BookSection::whereIn('book_id', $books->pluck('id'))
+                ->get(['id', 'book_id'])
+                ->groupBy('book_id')
+                ->map(fn ($rows) => $rows->pluck('id'))
+            : collect();
+
+        $sectionsFor = function (Book $book) use ($books, $sectionIdsByBook) {
+            if ($book->relationLoaded('sections')) {
+                return $book->sections->pluck('id');
+            }
+
+            return $sectionIdsByBook->get($book->id, collect())->values();
+        };
+
         foreach ($books as $book) {
-            $sectionIds = $book->relationLoaded('sections')
-                ? $book->sections->pluck('id')
-                : $book->sections()->pluck('id');
+            $sectionIds = $sectionsFor($book);
 
             $total = $sectionIds->count();
             $done = $sectionIds->intersect($passed)->count();
@@ -91,7 +109,7 @@ class BookController extends Controller
                 'sections_passed' => $done,
                 'read_percent' => $total > 0 ? (int) round($read / $total * 100) : 0,
                 'percent' => $total > 0 ? (int) round($done / $total * 100) : 0,
-                'completed' => $book->completedBy($passed, $passedBooks),
+                'completed' => $book->completedBy($passed, $passedBooks, $sectionIds),
             ];
         }
     }

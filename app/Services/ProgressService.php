@@ -572,10 +572,12 @@ class ProgressService
             ];
         })->values();
 
+        $stats = $this->stats($user);
+
         return [
-            'stats' => $this->stats($user),
+            'stats' => $stats,
             'levels' => $levelPayload,
-            'next_badges' => $this->nextBadges($user),
+            'next_badges' => $this->nextBadges($user, 3, $stats),
             'recent_attempts' => $this->recentAttempts($user),
             'monthly_points' => $this->monthlyPoints($user),
         ];
@@ -585,9 +587,11 @@ class ProgressService
      * The automatic badges this reader is closest to earning, so the screen can
      * show something to aim at rather than only what's already done.
      */
-    private function nextBadges(User $user, int $limit = 3): \Illuminate\Support\Collection
+    private function nextBadges(User $user, int $limit = 3, ?array $stats = null): \Illuminate\Support\Collection
     {
-        $stats = $this->stats($user);
+        // detail() has already worked these out; recomputing them walked the
+        // whole catalogue a second time for one screen.
+        $stats ??= $this->stats($user);
         $held = $user->badges()->pluck('badges.id')->all();
 
         return Badge::query()
