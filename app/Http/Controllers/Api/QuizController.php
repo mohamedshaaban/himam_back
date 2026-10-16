@@ -25,7 +25,7 @@ class QuizController extends Controller
      */
     public function show(Request $request, BookSection $section): JsonResponse
     {
-        abort_unless($section->book->is_published, 404);
+        abort_unless($section->book->isAvailable(), 404);
 
         $this->assertCanRead($request, $section->book);
 
@@ -83,7 +83,7 @@ class QuizController extends Controller
      */
     public function submit(Request $request, BookSection $section): JsonResponse
     {
-        abort_unless($section->book->is_published, 404);
+        abort_unless($section->book->isAvailable(), 404);
 
         $this->assertCanRead($request, $section->book);
 

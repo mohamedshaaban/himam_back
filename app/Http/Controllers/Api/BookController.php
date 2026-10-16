@@ -36,11 +36,15 @@ class BookController extends Controller
 
     public function show(Request $request, Book $book): BookResource
     {
-        abort_unless($book->is_published, 404);
+        // The level is loaded once and then kept: isAvailable() needs it to
+        // answer, and load() would fetch it a second time.
+        $book->loadMissing('level');
+
+        abort_unless($book->isAvailable(), 404);
 
         $this->assertCanRead($request, $book);
 
-        $book->load(['level', 'sections' => fn ($q) => $q->withCount('questions')])
+        $book->load(['sections' => fn ($q) => $q->withCount('questions')])
             ->loadCount('questions');
 
         $passed = $request->user()?->passedSectionIds() ?? [];

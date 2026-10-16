@@ -37,9 +37,37 @@ class Book extends Model
         ];
     }
 
+    /**
+     * The books a reader may see.
+     *
+     * Published, and on a level that is still active. Deactivating a level
+     * withdraws its books from the programme entirely — they leave the
+     * catalogue, their sections and exams stop answering, and they leave both
+     * sides of every ratio. The alternative, where an inactive level only
+     * hid a heading while its books stayed open, meant "inactive" described
+     * the heading rather than the content.
+     *
+     * Administrators are unaffected: nothing under /api/admin goes through
+     * this scope, so a withdrawn book is still there to be edited and
+     * reinstated.
+     */
     public function scopePublished(Builder $query): Builder
     {
-        return $query->where('is_published', true);
+        return $query->where('is_published', true)
+            ->whereHas('level', fn (Builder $level) => $level->where('is_active', true));
+    }
+
+    /**
+     * The same rule for one book in hand, for the endpoints that are given a
+     * book by the router rather than querying for it.
+     */
+    public function isAvailable(): bool
+    {
+        if (! $this->is_published) {
+            return false;
+        }
+
+        return (bool) $this->level?->is_active;
     }
 
     public function level(): BelongsTo

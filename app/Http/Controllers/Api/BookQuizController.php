@@ -30,7 +30,7 @@ class BookQuizController extends Controller
 
     public function show(Request $request, Book $book): JsonResponse
     {
-        abort_unless($book->is_published, 404);
+        abort_unless($book->isAvailable(), 404);
 
         $this->assertCanRead($request, $book);
 
@@ -76,7 +76,7 @@ class BookQuizController extends Controller
 
     public function submit(Request $request, Book $book): JsonResponse
     {
-        abort_unless($book->is_published, 404);
+        abort_unless($book->isAvailable(), 404);
 
         $this->assertCanRead($request, $book);
         abort_unless($book->hasOwnQuiz(), 404, __('This book is examined section by section, so it has no exam of its own.'));
@@ -118,7 +118,7 @@ class BookQuizController extends Controller
      */
     public function markRead(Request $request, Book $book): JsonResponse
     {
-        abort_unless($book->is_published, 404);
+        abort_unless($book->isAvailable(), 404);
 
         $this->assertCanRead($request, $book);
 

@@ -27,7 +27,7 @@ class SectionController extends Controller
      */
     public function markRead(Request $request, BookSection $section): JsonResponse
     {
-        abort_unless($section->book->is_published, 404);
+        abort_unless($section->book->isAvailable(), 404);
 
         $this->assertCanRead($request, $section->book);
 
@@ -49,7 +49,7 @@ class SectionController extends Controller
      */
     public function show(Request $request, BookSection $section): SectionResource
     {
-        abort_unless($section->book->is_published, 404);
+        abort_unless($section->book->isAvailable(), 404);
 
         $this->assertCanRead($request, $section->book);
 

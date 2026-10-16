@@ -95,7 +95,10 @@ class MoveExamToBook extends Command
         $ids = array_filter($this->option('book'));
 
         return Book::query()
-            ->when($ids !== [], fn ($q) => $q->whereIn('id', $ids), fn ($q) => $q->published())
+            // Deliberately not published(): a book withdrawn with its level is
+            // still a book, and it should come back with its exam in the right
+            // place when the level is reinstated.
+            ->when($ids !== [], fn ($q) => $q->whereIn('id', $ids), fn ($q) => $q->where('is_published', true))
             ->with(['sections:id,book_id'])
             ->orderBy('id')
             ->get();
