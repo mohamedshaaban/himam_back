@@ -229,9 +229,9 @@ class ProgressService
      */
     public function syncBadges(User $user): \Illuminate\Support\Collection
     {
-        // The screen's levels are the active ones, which is now precisely the
-        // set stats() counts, so it is handed over rather than fetched again.
-        $stats = $this->stats($user, $levels->flatMap->books);
+        // No catalogue to hand over here — grading has none loaded — so stats()
+        // fetches its own.
+        $stats = $this->stats($user);
         $alreadyHeld = $user->badges()->pluck('badges.id')->all();
 
         $newlyEarned = Badge::query()
