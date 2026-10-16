@@ -134,6 +134,52 @@ class Book extends Model
         ];
     }
 
+    /**
+     * Where this book's examination lives, said plainly.
+     *
+     * A client should not have to work this out from the shape of the payload —
+     * counting sections, noticing an empty questions_count, inferring that a
+     * hidden button means the exam is somewhere else. It asks here and is told.
+     *
+     *   book     one exam over the whole book, at /books/{id}/quiz
+     *   sections one exam per section, at /sections/{id}/quiz
+     *   none     no questions have been written yet
+     */
+    public function examSummary(): array
+    {
+        if ($this->hasOwnQuiz()) {
+            return [
+                'scope' => 'book',
+                'button' => $this->quizButton(),
+                'questions_total' => $this->questions()->count(),
+            ];
+        }
+
+        // Three ways to know, cheapest first: a count the query asked for, the
+        // sections already loaded with their own counts, and only failing both
+        // a query of its own.
+        if (isset($this->sections_with_quiz_count)) {
+            $sectionsWithQuiz = (int) $this->sections_with_quiz_count;
+        } elseif ($this->relationLoaded('sections')) {
+            $sectionsWithQuiz = $this->sections->filter(
+                fn ($section) => isset($section->questions_count)
+                    ? $section->questions_count > 0
+                    : $section->questions()->exists()
+            )->count();
+        } else {
+            $sectionsWithQuiz = $this->sections()->whereHas('questions')->count();
+        }
+
+        return [
+            'scope' => $sectionsWithQuiz > 0 ? 'sections' : 'none',
+
+            // There is no book-level button in either case, and saying so beats
+            // leaving the field out and making a client guess.
+            'button' => ['visible' => false, 'label' => $this->t('quiz_button_label') ?: __('Take the quiz')],
+            'sections_with_quiz' => $sectionsWithQuiz,
+        ];
+    }
+
     /** The reading programmes this book appears in, if any. */
     public function programs(): BelongsToMany
     {

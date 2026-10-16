@@ -17,6 +17,11 @@ class SectionResource extends JsonResource
             'position' => $this->position,
             'questions_count' => $this->whenCounted('questions'),
 
+            // Explicit, because questions_count drops to zero when the book
+            // claims the questions for its own exam — which reads as "this
+            // section has no quiz" only if you already know that rule.
+            'has_quiz' => $this->whenCounted('questions', fn () => $this->questions_count > 0),
+
             // The section text is large, so it ships only from the "read"
             // endpoint, which loads it deliberately.
             'body' => $this->when($request->routeIs('*sections.show'), fn () => $this->t('body')),

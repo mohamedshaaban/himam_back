@@ -17,7 +17,13 @@ class BookController extends Controller
     {
         $books = Book::published()
             ->with('level')
-            ->withCount(['sections', 'questions'])
+            // sections_with_quiz_count keeps examSummary() to one query for the
+            // whole index rather than one per book.
+            ->withCount([
+                'sections',
+                'questions',
+                'sections as sections_with_quiz_count' => fn ($q) => $q->whereHas('questions'),
+            ])
             ->when($request->filled('level_id'), fn ($q) => $q->where('level_id', $request->integer('level_id')))
             ->orderBy('position')
             ->get();

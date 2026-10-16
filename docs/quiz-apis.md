@@ -52,7 +52,7 @@ any shape.
 Shape **A**. No sections, a document of its own, its own exam.
 
 ```http
-GET /api/books/9
+GET /api/books/7
 Accept: application/json
 Accept-Language: en
 Authorization: Bearer <token>
@@ -63,20 +63,28 @@ Authorization: Bearer <token>
 ```json
 {
   "data": {
-    "id": 9,
-    "title": "A book without sections",
-    "author": "An author",
-    "description": "Read as a whole",
+    "id": 7,
+    "title": "A book read whole",
+    "author": "The author",
+    "description": "Read as one document.",
     "cover": null,
-    "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
+    "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
     "has_own_quiz": true,
     "quiz_button": {
       "visible": true,
-      "label": "Revised exam"
+      "label": "Exam on the whole book"
     },
-    "pages": 80,
+    "exam": {
+      "scope": "book",
+      "button": {
+        "visible": true,
+        "label": "Exam on the whole book"
+      },
+      "questions_total": 3
+    },
+    "pages": 120,
     "points": 500,
-    "position": 99,
+    "position": 10,
     "level": {
       "id": 1,
       "name": "First Level",
@@ -116,12 +124,20 @@ Authorization: Bearer <token>
     "title": "Introduction to Structured Reading",
     "author": "Prepared by the programme administration",
     "description": "A practical introduction to what structured reading means and the tools it uses, setting out a weekly plan that begins with a goal and ends with a review.",
-    "cover": "http://127.0.0.1:8000/assets/banner.svg",
-    "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
+    "cover": "http://127.0.0.1:8005/assets/banner.svg",
+    "pdf": null,
     "has_own_quiz": true,
     "quiz_button": {
       "visible": true,
-      "label": "Exam on the whole book"
+      "label": "Take the quiz"
+    },
+    "exam": {
+      "scope": "book",
+      "button": {
+        "visible": true,
+        "label": "Take the quiz"
+      },
+      "questions_total": 9
     },
     "pages": 140,
     "points": 400,
@@ -138,8 +154,9 @@ Authorization: Bearer <token>
         "book_id": 1,
         "title": "Why We Read Regularly",
         "position": 1,
-        "questions_count": 3,
-        "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
+        "questions_count": 0,
+        "has_quiz": false,
+        "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
         "read": false,
         "passed": false
       },
@@ -148,8 +165,9 @@ Authorization: Bearer <token>
         "book_id": 1,
         "title": "Building a Reading Plan",
         "position": 2,
-        "questions_count": 3,
-        "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
+        "questions_count": 0,
+        "has_quiz": false,
+        "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
         "read": false,
         "passed": false
       },
@@ -158,13 +176,7 @@ Authorization: Bearer <token>
         "book_id": 1,
         "title": "Review and Summary",
         "position": 3,
-        "questions_count": 3,
-        "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
-        "read": false,
-        "passed": false
-      }
-    ],
-    "progress": {
+        "questions_count": 0,
   …
 ```
 
@@ -188,12 +200,20 @@ Authorization: Bearer <token>
     "title": "Foundations of Systematic Thinking",
     "author": "Prepared by the programme administration",
     "description": "Sets out the rules of ordered thinking and how to apply them to what you read, so a text becomes understanding rather than scattered facts.",
-    "cover": "http://127.0.0.1:8000/assets/banner.svg",
+    "cover": "http://127.0.0.1:8005/assets/banner.svg",
     "pdf": null,
     "has_own_quiz": false,
     "quiz_button": {
       "visible": false,
       "label": "Take the quiz"
+    },
+    "exam": {
+      "scope": "sections",
+      "button": {
+        "visible": false,
+        "label": "Take the quiz"
+      },
+      "sections_with_quiz": 3
     },
     "pages": 165,
     "points": 400,
@@ -211,7 +231,8 @@ Authorization: Bearer <token>
         "title": "Why We Read Regularly",
         "position": 1,
         "questions_count": 3,
-        "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
+        "has_quiz": true,
+        "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
         "read": false,
         "passed": false
       },
@@ -221,16 +242,8 @@ Authorization: Bearer <token>
         "title": "Building a Reading Plan",
         "position": 2,
         "questions_count": 3,
-        "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
-        "read": false,
-        "passed": false
-      },
-      {
-        "id": 6,
-        "book_id": 2,
-        "title": "Review and Summary",
-        "position": 3,
-        "questions_count": 3,
+        "has_quiz": true,
+        "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
   …
 ```
 
@@ -283,7 +296,7 @@ client says so explicitly.
 For a book read as one document.
 
 ```http
-POST /api/books/9/read
+POST /api/books/7/read
 Accept: application/json
 Accept-Language: en
 Authorization: Bearer <token>
@@ -294,7 +307,7 @@ Authorization: Bearer <token>
 ```json
 {
   "data": {
-    "id": 9,
+    "id": 7,
     "read": true
   }
 }
@@ -349,12 +362,20 @@ Authorization: Bearer <token>
     "title": "Introduction to Structured Reading",
     "author": "Prepared by the programme administration",
     "description": "A practical introduction to what structured reading means and the tools it uses, setting out a weekly plan that begins with a goal and ends with a review.",
-    "cover": "http://127.0.0.1:8000/assets/banner.svg",
-    "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
+    "cover": "http://127.0.0.1:8005/assets/banner.svg",
+    "pdf": null,
     "has_own_quiz": true,
     "quiz_button": {
       "visible": true,
-      "label": "Exam on the whole book"
+      "label": "Take the quiz"
+    },
+    "exam": {
+      "scope": "book",
+      "button": {
+        "visible": true,
+        "label": "Take the quiz"
+      },
+      "questions_total": 9
     },
     "pages": 140,
     "points": 400,
@@ -371,8 +392,9 @@ Authorization: Bearer <token>
         "book_id": 1,
         "title": "Why We Read Regularly",
         "position": 1,
-        "questions_count": 3,
-        "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
+        "questions_count": 0,
+        "has_quiz": false,
+        "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
         "read": true,
         "passed": false
       },
@@ -381,17 +403,15 @@ Authorization: Bearer <token>
         "book_id": 1,
         "title": "Building a Reading Plan",
         "position": 2,
-        "questions_count": 3,
-        "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
+        "questions_count": 0,
+        "has_quiz": false,
+        "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
         "read": false,
         "passed": false
       },
       {
         "id": 3,
         "book_id": 1,
-        "title": "Review and Summary",
-        "position": 3,
-        "questions_count": 3,
   …
 ```
 
@@ -419,7 +439,7 @@ never sent before grading.
 `meta` carries everything a screen needs to say "start" rather than "retake": `taken`, `attempts`, `passed`, `best_score` and the last attempt. All of them are empty here.
 
 ```http
-GET /api/books/9/quiz
+GET /api/books/7/quiz
 Accept: application/json
 Accept-Language: en
 Authorization: Bearer <token>
@@ -449,11 +469,6 @@ Authorization: Bearer <token>
           "id": 165,
           "text": "Option 3",
           "position": 3
-        },
-        {
-          "id": 166,
-          "text": "Option 4",
-          "position": 4
         }
       ]
     },
@@ -463,24 +478,19 @@ Authorization: Bearer <token>
       "position": 2,
       "options": [
         {
-          "id": 167,
+          "id": 166,
           "text": "Option 1",
           "position": 1
         },
         {
-          "id": 168,
+          "id": 167,
           "text": "Option 2",
           "position": 2
         },
         {
-          "id": 169,
+          "id": 168,
           "text": "Option 3",
           "position": 3
-        },
-        {
-          "id": 170,
-          "text": "Option 4",
-          "position": 4
         }
       ]
     },
@@ -490,34 +500,41 @@ Authorization: Bearer <token>
       "position": 3,
       "options": [
         {
-          "id": 171,
+          "id": 169,
           "text": "Option 1",
           "position": 1
         },
         {
-          "id": 172,
+          "id": 170,
           "text": "Option 2",
           "position": 2
         },
         {
-          "id": 173,
+          "id": 171,
           "text": "Option 3",
           "position": 3
-        },
-        {
-          "id": 174,
-          "text": "Option 4",
-          "position": 4
         }
       ]
+    }
+  ],
+  "meta": {
+    "book": {
+      "id": 7,
+      "title": "A book read whole"
     },
-    {
-      "id": 58,
-      "text": "Question 4?",
-      "position": 4,
-      "options": [
-        {
-  …
+    "questions_total": 3,
+    "pass_ratio": 0.6,
+    "quiz_button": {
+      "visible": true,
+      "label": "Exam on the whole book"
+    },
+    "taken": false,
+    "attempts": 0,
+    "passed": false,
+    "best_score": null,
+    "last_attempt": null
+  }
+}
 ```
 
 ### What `meta` means
@@ -546,7 +563,7 @@ wrong.
 Every answer wrong on purpose. Note what comes back and what does not.
 
 ```http
-POST /api/books/9/quiz
+POST /api/books/7/quiz
 Accept: application/json
 Accept-Language: en
 Authorization: Bearer <token>
@@ -555,11 +572,8 @@ Content-Type: application/json
 {
   "answers": {
     "55": 163,
-    "56": 167,
-    "57": 171,
-    "58": 175,
-    "59": 179,
-    "60": 183
+    "56": 166,
+    "57": 169
   }
 }
 ```
@@ -569,26 +583,23 @@ Content-Type: application/json
 ```json
 {
   "score": 0,
-  "total": 6,
+  "total": 3,
   "passed": false,
   "points_awarded": 0,
   "correct_options": null,
   "incorrect_questions": [
     55,
     56,
-    57,
-    58,
-    59,
-    60
+    57
   ],
   "new_badges": [],
   "new_certificates": [],
   "stats": {
     "points": 0,
     "sections_passed": 0,
-    "sections_total": 18,
+    "sections_total": 19,
     "books_completed": 0,
-    "books_total": 7,
+    "books_total": 8,
     "badges_earned": 0,
     "certificates": 0
   }
@@ -612,7 +623,7 @@ certificate, and the reader's standing is unchanged.
 `taken` is now true and `passed` is still false, so a screen can offer a resit and show what the last attempt scored.
 
 ```http
-GET /api/books/9/quiz
+GET /api/books/7/quiz
 Accept: application/json
 Accept-Language: en
 Authorization: Bearer <token>
@@ -642,11 +653,6 @@ Authorization: Bearer <token>
           "id": 165,
           "text": "Option 3",
           "position": 3
-        },
-        {
-          "id": 166,
-          "text": "Option 4",
-          "position": 4
         }
       ]
     },
@@ -656,23 +662,30 @@ Authorization: Bearer <token>
       "position": 2,
       "options": [
         {
-          "id": 167,
+          "id": 166,
           "text": "Option 1",
           "position": 1
         },
         {
-          "id": 168,
+          "id": 167,
           "text": "Option 2",
           "position": 2
         },
         {
-          "id": 169,
+          "id": 168,
           "text": "Option 3",
           "position": 3
-        },
+        }
+      ]
+    },
+    {
+      "id": 57,
+      "text": "Question 3?",
+      "position": 3,
+      "options": [
         {
-          "id": 170,
-          "text": "Option 4",
+          "id": 169,
+          "text": "Option 1",
   …
 ```
 
@@ -687,7 +700,7 @@ Passing means the fraction of correct answers reaches `pass_ratio`.
 Now the key comes back, along with everything the pass produced.
 
 ```http
-POST /api/books/9/quiz
+POST /api/books/7/quiz
 Accept: application/json
 Accept-Language: en
 Authorization: Bearer <token>
@@ -695,12 +708,9 @@ Content-Type: application/json
 
 {
   "answers": {
-    "55": 165,
-    "56": 169,
-    "57": 173,
-    "58": 177,
-    "59": 181,
-    "60": 184
+    "55": 164,
+    "56": 167,
+    "57": 170
   }
 }
 ```
@@ -709,17 +719,14 @@ Content-Type: application/json
 
 ```json
 {
-  "score": 6,
-  "total": 6,
+  "score": 3,
+  "total": 3,
   "passed": true,
   "points_awarded": 500,
   "correct_options": {
-    "55": 165,
-    "56": 169,
-    "57": 173,
-    "58": 177,
-    "59": 181,
-    "60": 184
+    "55": 164,
+    "56": 167,
+    "57": 170
   },
   "incorrect_questions": [],
   "new_badges": [
@@ -727,7 +734,7 @@ Content-Type: application/json
       "id": 3,
       "name": "Book Finisher",
       "description": "Completed every section of one book.",
-      "image": "http://127.0.0.1:8000/assets/badge.png",
+      "image": "http://127.0.0.1:8005/assets/badge.png",
       "criteria_type": "books_completed",
       "criteria_value": 1,
       "position": 2
@@ -735,19 +742,19 @@ Content-Type: application/json
   ],
   "new_certificates": [
     {
-      "id": 46,
-      "serial": "CERT-2026-TSUF0M",
-      "title": "A book without sections",
-      "issued_at": "2026-10-15",
-      "verification_url": "http://127.0.0.1:8000/api/certificates/verify/2261ecdd-a84f-4bc3-a44b-77e27a196e06"
+      "id": 30,
+      "serial": "CERT-2026-O0GXPF",
+      "title": "A book read whole",
+      "issued_at": "2026-10-16",
+      "verification_url": "http://127.0.0.1:8005/api/certificates/verify/cd3f70f7-e93a-42cd-870f-47d906851c3b"
     }
   ],
   "stats": {
     "points": 500,
     "sections_passed": 0,
-    "sections_total": 18,
+    "sections_total": 19,
     "books_completed": 1,
-    "books_total": 7,
+    "books_total": 8,
     "badges_earned": 1,
     "certificates": 1
   }
@@ -779,7 +786,7 @@ A reader may sit the exam as often as they like, whether they failed or passed.
 A perfect score again. `points_awarded` is `0` and nothing new is issued.
 
 ```http
-POST /api/books/9/quiz
+POST /api/books/7/quiz
 Accept: application/json
 Accept-Language: en
 Authorization: Bearer <token>
@@ -787,12 +794,9 @@ Content-Type: application/json
 
 {
   "answers": {
-    "55": 165,
-    "56": 169,
-    "57": 173,
-    "58": 177,
-    "59": 181,
-    "60": 184
+    "55": 164,
+    "56": 167,
+    "57": 170
   }
 }
 ```
@@ -801,17 +805,14 @@ Content-Type: application/json
 
 ```json
 {
-  "score": 6,
-  "total": 6,
+  "score": 3,
+  "total": 3,
   "passed": true,
   "points_awarded": 0,
   "correct_options": {
-    "55": 165,
-    "56": 169,
-    "57": 173,
-    "58": 177,
-    "59": 181,
-    "60": 184
+    "55": 164,
+    "56": 167,
+    "57": 170
   },
   "incorrect_questions": [],
   "new_badges": [],
@@ -819,9 +820,9 @@ Content-Type: application/json
   "stats": {
     "points": 500,
     "sections_passed": 0,
-    "sections_total": 18,
+    "sections_total": 19,
     "books_completed": 1,
-    "books_total": 7,
+    "books_total": 8,
     "badges_earned": 1,
     "certificates": 1
   }
@@ -961,7 +962,7 @@ Content-Type: application/json
       "id": 1,
       "name": "The Persistent",
       "description": "Passed your first section of the programme.",
-      "image": "http://127.0.0.1:8000/assets/badge.png",
+      "image": "http://127.0.0.1:8005/assets/badge.png",
       "criteria_type": "sections_passed",
       "criteria_value": 1,
       "position": 0
@@ -971,9 +972,9 @@ Content-Type: application/json
   "stats": {
     "points": 650,
     "sections_passed": 1,
-    "sections_total": 18,
+    "sections_total": 19,
     "books_completed": 1,
-    "books_total": 7,
+    "books_total": 8,
     "badges_earned": 2,
     "certificates": 1
   }
@@ -1006,33 +1007,33 @@ Authorization: Bearer <token>
 {
   "data": [
     {
-      "id": 115,
+      "id": 76,
       "tag": "Badge",
       "title": "New badge: The Persistent",
       "body": "Congratulations — “The Persistent” has been added to your badges.",
-      "image": "http://127.0.0.1:8000/assets/badge.png",
+      "image": "http://127.0.0.1:8005/assets/badge.png",
       "category": "badge",
-      "published_at": "2026-10-15T09:51:54+00:00",
+      "published_at": "2026-10-16T17:59:11+00:00",
       "read": false
     },
     {
-      "id": 114,
-      "tag": "Certificate",
-      "title": "Your certificate for “A book without sections” has been issued",
-      "body": "Congratulations — your certificate for “A book without sections” has been issued with serial CERT-2026-TSUF0M. You will find it on the certificates page.",
-      "image": null,
-      "category": "certificate",
-      "published_at": "2026-10-15T09:51:51+00:00",
-      "read": false
-    },
-    {
-      "id": 113,
+      "id": 74,
       "tag": "Badge",
       "title": "New badge: Book Finisher",
       "body": "Congratulations — “Book Finisher” has been added to your badges.",
-      "image": "http://127.0.0.1:8000/assets/badge.png",
+      "image": "http://127.0.0.1:8005/assets/badge.png",
       "category": "badge",
-      "published_at": "2026-10-15T09:51:50+00:00",
+      "published_at": "2026-10-16T17:59:09+00:00",
+      "read": false
+    },
+    {
+      "id": 75,
+      "tag": "Certificate",
+      "title": "Your certificate for “A book read whole” has been issued",
+      "body": "Congratulations — your certificate for “A book read whole” has been issued with serial CERT-2026-O0GXPF. You will find it on the certificates page.",
+      "image": null,
+      "category": "certificate",
+      "published_at": "2026-10-16T17:59:09+00:00",
       "read": false
     },
     {
@@ -1040,9 +1041,9 @@ Authorization: Bearer <token>
       "tag": "New programme",
       "title": "Structured Reading programme opens — first term",
       "body": "Registration is open until the end of the week.",
-      "image": "http://127.0.0.1:8000/assets/banner.svg",
+      "image": "http://127.0.0.1:8005/assets/banner.svg",
       "category": "program",
-      "published_at": "2026-10-14T16:14:41+00:00",
+      "published_at": "2026-10-15T09:06:12+00:00",
       "read": false
     },
     {
@@ -1050,10 +1051,12 @@ Authorization: Bearer <token>
       "tag": "Exam",
       "title": "Second level exam date",
       "body": "Sunday 16 August 2026, 7 p.m.",
-      "image": "http://127.0.0.1:8000/assets/banner.svg",
+      "image": "http://127.0.0.1:8005/assets/banner.svg",
       "category": "exam",
-      "published_at": "2026-10-13T17:14:41+00:00",
+      "published_at": "2026-10-14T10:06:12+00:00",
       "read": false
+    },
+    {
   …
 ```
 
@@ -1085,28 +1088,36 @@ Authorization: Bearer <token>
 {
   "data": [
     {
-      "id": 46,
-      "serial": "CERT-2026-TSUF0M",
-      "title": "A book without sections",
-      "issued_at": "2026-10-15",
+      "id": 30,
+      "serial": "CERT-2026-O0GXPF",
+      "title": "A book read whole",
+      "issued_at": "2026-10-16",
       "level": null,
       "book": {
-        "id": 9,
-        "title": "A book without sections",
-        "author": "An author",
-        "description": "Read as a whole",
+        "id": 7,
+        "title": "A book read whole",
+        "author": "The author",
+        "description": "Read as one document.",
         "cover": null,
-        "pdf": "http://127.0.0.1:8000/storage/uploads/sample-section.pdf",
+        "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
         "has_own_quiz": true,
         "quiz_button": {
           "visible": true,
-          "label": "Revised exam"
+          "label": "Exam on the whole book"
         },
-        "pages": 80,
+        "exam": {
+          "scope": "book",
+          "button": {
+            "visible": true,
+            "label": "Exam on the whole book"
+          },
+          "questions_total": 3
+        },
+        "pages": 120,
         "points": 500,
-        "position": 99
+        "position": 10
       },
-      "verification_url": "http://127.0.0.1:8000/api/certificates/verify/2261ecdd-a84f-4bc3-a44b-77e27a196e06"
+      "verification_url": "http://127.0.0.1:8005/api/certificates/verify/cd3f70f7-e93a-42cd-870f-47d906851c3b"
     }
   ]
 }
@@ -1225,7 +1236,7 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "message": "",
+  "message": "This book is examined as a whole, so its sections have no exam of their own.",
   "exception": "Symfony\\Component\\HttpKernel\\Exception\\NotFoundHttpException",
   "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Application.php",
   "line": 1437,
@@ -1572,7 +1583,7 @@ Authorization: Bearer <token>
 
 ```json
 {
-  "message": "",
+  "message": "This book is examined section by section, so it has no exam of its own.",
   "exception": "Symfony\\Component\\HttpKernel\\Exception\\NotFoundHttpException",
   "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Application.php",
   "line": 1437,
@@ -1909,7 +1920,7 @@ Authorization: Bearer <token>
 `answers` must be present, even when empty. The message is translated by `Accept-Language`.
 
 ```http
-POST /api/books/9/quiz
+POST /api/books/7/quiz
 Accept: application/json
 Accept-Language: en
 Authorization: Bearer <token>

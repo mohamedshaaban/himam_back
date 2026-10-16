@@ -26,6 +26,10 @@ class BookResource extends JsonResource
             // the dashboard — the client renders what it is told rather than
             // deciding for itself.
             'quiz_button' => $this->quizButton(),
+
+            // Where the exam lives, so a client is told rather than left to
+            // infer it from section counts and a hidden button.
+            'exam' => $this->examSummary(),
             'pages' => $this->pages,
             'points' => $this->points,
             'position' => $this->position,
