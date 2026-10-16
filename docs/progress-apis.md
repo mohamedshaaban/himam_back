@@ -10,14 +10,13 @@ The complete interface is **api.md**; examination is **quiz-apis.md**.
 
 ## Before anything else: two rules that shape every figure here
 
-**Reading is not passing.** Opening a section records a read. Passing comes
-from an exam. A reader can have read every section of a book and passed none
-of them, and the API reports those separately everywhere.
+**Sections are read, not passed.** A section records one thing: that it was
+opened. There is no section exam, so nothing passes a section.
 
-**A book is finished by whichever exam it has.** A book examined as a whole is
-finished by passing that exam; one examined section by section is finished when
-every section is passed. The field that answers "is this book done" is
-`completed` — never `percent == 100`.
+**A book is finished by passing its exam**, which opens once every section has
+been read. The field that answers "is this book done" is `completed` — never
+`read_percent == 100`, which only means the reading is finished and the exam
+is now available.
 
 ---
 
@@ -33,10 +32,10 @@ at the top level, *not* wrapped in `data` the way most of the API is.
 {
   "stats": {
     "points": 1800,
-    "sections_passed": 12,
-    "sections_total": 19,
+    "sections_read": 12,
+    "sections_total": 18,
     "books_completed": 4,
-    "books_total": 8,
+    "books_total": 6,
     "badges_earned": 5,
     "certificates": 6
   },
@@ -47,22 +46,22 @@ at the top level, *not* wrapped in `data` the way most of the API is.
       "name": "المثابر",
       "description": "أنهيت أول قسم من أقسام البرنامج.",
       "image": "http://localhost:8000/assets/badge.png",
-      "criteria_type": "sections_passed",
+      "criteria_type": "sections_read",
       "criteria_value": 1,
       "position": 0,
       "earned": true,
-      "awarded_at": "2026-10-15 10:06:14"
+      "awarded_at": "2026-10-16 19:24:12"
     },
     {
       "id": 2,
       "name": "القارئ المنتظم",
       "description": "أنهيت خمسة أقسام بنجاح.",
       "image": "http://localhost:8000/assets/badge.png",
-      "criteria_type": "sections_passed",
+      "criteria_type": "sections_read",
       "criteria_value": 5,
       "position": 1,
       "earned": true,
-      "awarded_at": "2026-10-15 10:06:14"
+      "awarded_at": "2026-10-16 19:24:12"
     },
     {
       "id": 3,
@@ -73,7 +72,7 @@ at the top level, *not* wrapped in `data` the way most of the API is.
       "criteria_value": 1,
       "position": 2,
       "earned": true,
-      "awarded_at": "2026-10-15 10:06:14"
+      "awarded_at": "2026-10-16 19:24:12"
     },
     {
       "id": 4,
@@ -96,10 +95,10 @@ the recent attempts and the points earned per month.
 ```json
 {
   "points": 1800,
-  "sections_passed": 12,
-  "sections_total": 19,
+  "sections_read": 12,
+  "sections_total": 18,
   "books_completed": 4,
-  "books_total": 8,
+  "books_total": 6,
   "badges_earned": 5,
   "certificates": 6
 }
@@ -110,7 +109,7 @@ the recent attempts and the points earned per month.
 | Field | Meaning |
 |---|---|
 | `points` | lifetime points |
-| `sections_passed` / `sections_total` | section exams passed, out of the sections a reader can reach |
+| `sections_read` / `sections_total` | sections opened, out of the sections a reader can reach |
 | `books_completed` / `books_total` | books finished, out of the books a reader can reach |
 | `badges_earned` | badges held |
 | `certificates` | certificates held, book and level together |
@@ -126,15 +125,15 @@ these ratios, so the figure always describes what is in front of the reader.
 {
   "id": 1,
   "name": "المستوى الأول",
-  "books_total": 4,
+  "books_total": 2,
   "books_completed": 2,
-  "sections_total": 7,
-  "sections_passed": 6,
-  "percent": 86,
+  "sections_total": 6,
+  "sections_read": 6,
+  "read_percent": 100,
   "certificate": {
     "id": 3,
-    "serial": "CERT-2026-XRO0E9",
-    "issued_at": "2026-10-15"
+    "serial": "CERT-2026-0WGOO8",
+    "issued_at": "2026-10-16"
   },
   "books": [
     {
@@ -145,9 +144,7 @@ these ratios, so the figure always describes what is in front of the reader.
       "has_own_quiz": true,
       "sections_total": 3,
       "sections_read": 3,
-      "sections_passed": 3,
       "read_percent": 100,
-      "percent": 100,
       "completed": true,
       "sections": [
         {
@@ -155,33 +152,21 @@ these ratios, so the figure always describes what is in front of the reader.
           "title": "لماذا نقرأ بانتظام",
           "position": 1,
           "read": true,
-          "passed": true,
-          "attempts": 1,
-          "best_score": 3,
-          "questions": 0,
-          "passed_at": "2026-10-15"
+          "read_at": "2026-10-16"
         },
         {
           "id": 2,
           "title": "بناء خطة القراءة",
           "position": 2,
           "read": true,
-          "passed": true,
-          "attempts": 1,
-          "best_score": 3,
-          "questions": 0,
-          "passed_at": "2026-10-15"
+          "read_at": "2026-10-16"
         },
         {
           "id": 3,
           "title": "المراجعة والتلخيص",
           "position": 3,
           "read": true,
-          "passed": true,
-          "attempts": 1,
-          "best_score": 3,
-          "questions": 0,
-          "passed_at": "2026-10-15"
+          "read_at": "2026-10-16"
         }
       ]
     },
@@ -190,8 +175,24 @@ these ratios, so the figure always describes what is in front of the reader.
       "title": "أصول التفكير المنهجي",
       "points": 400,
       "pages": 165,
-      "has_own_quiz": false,
+      "has_own_quiz": true,
       "sections_total": 3,
+      "sections_read": 3,
+      "read_percent": 100,
+      "completed": true,
+      "sections": [
+        {
+          "id": 4,
+          "title": "لماذا نقرأ بانتظام",
+          "position": 1,
+          "read": true,
+          "read_at": "2026-10-16"
+        },
+        {
+          "id": 5,
+          "title": "بناء خطة القراءة",
+          "position": 2,
+          "read": true,
   …
 ```
 
@@ -200,18 +201,14 @@ Each book carries both measures side by side:
 | Field | Meaning |
 |---|---|
 | `sections_read` / `read_percent` | how far through the **reading** |
-| `sections_passed` / `percent` | how many section exams **passed** |
-| `has_own_quiz` | the exam belongs to the book, not its sections |
-| `completed` | finished, by whichever rule applies |
+| `completed` | the book's exam has been passed |
 
-When `has_own_quiz` is true there are no section exams, so `sections_passed`
-and `percent` stay at `0` however much the reader has done. Drive a progress
-bar from `read_percent` for those books, and use `completed` for "finished".
+Drive a progress bar from `read_percent`, and use `completed` for "finished".
+Reaching 100% opens the exam; passing it is what makes `completed` true.
 
 ### المحاولات الأخيرة و النقاط الشهرية
 
-`recent_attempts` lists the last ten graded attempts, each with its section and
-book. `monthly_points` gives twelve entries, one per month including the empty
+`recent_attempts` lists the last ten graded attempts. `monthly_points` gives twelve entries, one per month including the empty
 ones, so a chart shows real gaps rather than silently compressing inactive
 months.
 
@@ -263,14 +260,14 @@ Every active badge, and whether this reader holds it.
   "name": "المثابر",
   "description": "أنهيت أول قسم من أقسام البرنامج.",
   "image": "http://localhost:8000/assets/badge.png",
-  "criteria_type": "sections_passed",
+  "criteria_type": "sections_read",
   "criteria_value": 1,
   "position": 0,
   "earned": true
 }
 ```
 
-`criteria_type` is `sections_passed`, `books_completed`, `points` or `manual`.
+`criteria_type` is `sections_read`, `books_completed`, `points` or `manual`.
 The first three are awarded automatically when an exam is graded; a `manual`
 one is given by an administrator.
 
@@ -286,7 +283,7 @@ only appears for a signed-in reader:
   "name": "المثابر",
   "description": "أنهيت أول قسم من أقسام البرنامج.",
   "image": "http://localhost:8000/assets/badge.png",
-  "criteria_type": "sections_passed",
+  "criteria_type": "sections_read",
   "criteria_value": 1,
   "position": 0,
   "earned": false
@@ -321,7 +318,7 @@ Readers ranked by points.
     "avatar": "http://localhost:8000/assets/avatar-2.svg",
     "level": "المستوى الثاني",
     "books": 3,
-    "points": 1500
+    "points": 1300
   },
   {
     "rank": 3,
@@ -330,7 +327,7 @@ Readers ranked by points.
     "avatar": "http://localhost:8000/assets/avatar-3.svg",
     "level": "المستوى الثاني",
     "books": 3,
-    "points": 1350
+    "points": 1300
   },
   {
     "rank": 4,
@@ -339,7 +336,7 @@ Readers ranked by points.
     "avatar": "http://localhost:8000/assets/avatar-1.svg",
     "level": "المستوى الأول",
     "books": 2,
-    "points": 1200
+    "points": 800
   },
   {
     "rank": 5,
@@ -348,7 +345,7 @@ Readers ranked by points.
     "avatar": "http://localhost:8000/assets/avatar-2.svg",
     "level": "المستوى الأول",
     "books": 2,
-    "points": 1050
+    "points": 800
   }
 ]
 ```
@@ -376,7 +373,7 @@ lifetime total, so a monthly board really is monthly:
     "avatar": "http://localhost:8000/assets/avatar-2.svg",
     "level": "المستوى الثاني",
     "books": 3,
-    "points": 1500
+    "points": 1300
   },
   {
     "rank": 3,
@@ -399,9 +396,9 @@ What the reader holds.
 [
   {
     "id": 6,
-    "serial": "CERT-2026-NTR0JF",
+    "serial": "CERT-2026-KGMS8Z",
     "title": "المستوى الثاني",
-    "issued_at": "2026-10-15",
+    "issued_at": "2026-10-16",
     "level": {
       "id": 2,
       "name": "المستوى الثاني",
@@ -409,13 +406,13 @@ What the reader holds.
       "position": 2
     },
     "book": null,
-    "verification_url": "http://localhost/api/certificates/verify/35f4ec82-6b4c-49a4-953b-8d22fb80f85f"
+    "verification_url": "http://localhost/api/certificates/verify/8699f3b6-678a-49d8-8d23-57def9205cf0"
   },
   {
     "id": 5,
-    "serial": "CERT-2026-BL0IBF",
+    "serial": "CERT-2026-FTWOPV",
     "title": "الوعي المعرفي",
-    "issued_at": "2026-10-15",
+    "issued_at": "2026-10-16",
     "level": null,
     "book": {
       "id": 4,
@@ -424,11 +421,10 @@ What the reader holds.
       "description": "يبني عند القارئ وعياً بما يقرأ: كيف يميّز الرأي من الدليل، والمحكم من المتشابه.",
       "cover": "http://localhost:8000/assets/banner.svg",
       "pdf": null,
-      "has_own_quiz": false,
+      "has_own_quiz": true,
       "quiz_button": {
         "visible": false,
-        "label": "ابدأ الاختبار"
-      },
+        "label": "ابدأ الاختبار",
   …
 ```
 
@@ -466,10 +462,10 @@ Everything issuable, held or not, so a screen can show what is still ahead.
     "level": null,
     "title": "مقدمة في القراءة المنظمة",
     "earned": true,
-    "serial": "CERT-2026-F8XYMY",
-    "issued_at": "2026-10-15",
-    "verification_url": "http://localhost/api/certificates/verify/9ec9993d-5b23-4037-803c-d97126274554",
-    "sections_passed": 3,
+    "serial": "CERT-2026-NDKNSB",
+    "issued_at": "2026-10-16",
+    "verification_url": "http://localhost/api/certificates/verify/d2d58ca5-598c-4af3-bbd1-33d86269c709",
+    "sections_read": 3,
     "sections_total": 3,
     "percent": 100
   },
@@ -482,10 +478,10 @@ Everything issuable, held or not, so a screen can show what is still ahead.
     "level": null,
     "title": "أصول التفكير المنهجي",
     "earned": true,
-    "serial": "CERT-2026-GRUW1Y",
-    "issued_at": "2026-10-15",
-    "verification_url": "http://localhost/api/certificates/verify/de5c5110-0dab-434c-bcec-12f0553414f7",
-    "sections_passed": 3,
+    "serial": "CERT-2026-OHVARZ",
+    "issued_at": "2026-10-16",
+    "verification_url": "http://localhost/api/certificates/verify/fc6a2390-9c56-4075-907a-58666103dd8f",
+    "sections_read": 3,
     "sections_total": 3,
     "percent": 100
   },
@@ -498,8 +494,8 @@ Everything issuable, held or not, so a screen can show what is still ahead.
     "level": null,
     "title": "أمهات الكتب: دليل القارئ",
     "earned": true,
-    "serial": "CERT-2026-HQIKSV",
-    "issued_at": "2026-10-15",
+    "serial": "CERT-2026-T6FGBP",
+    "issued_at": "2026-10-16",
   …
 ```
 
@@ -508,10 +504,10 @@ Everything issuable, held or not, so a screen can show what is still ahead.
 | `scope` | `book` or `level` |
 | `earned` | whether it is held |
 | `serial`, `issued_at`, `verification_url` | present only when earned |
-| `sections_passed` / `sections_total` | progress towards it |
+| `sections_read` / `sections_total` | progress towards it |
 | `percent` | the same, as a percentage |
 
-A book examined as a whole counts as one step: taken or not.
+A book that is one document has no sections to count, so it is one step: opened or not.
 
 ---
 
@@ -522,11 +518,11 @@ Public, and behind the QR code printed on every certificate.
 ```json
 {
   "valid": true,
-  "serial": "CERT-2026-NTR0JF",
+  "serial": "CERT-2026-KGMS8Z",
   "holder": "عبدالله سالم",
   "title": "المستوى الثاني",
   "level": "المستوى الثاني",
-  "issued_at": "2026-10-15"
+  "issued_at": "2026-10-16"
 }
 ```
 

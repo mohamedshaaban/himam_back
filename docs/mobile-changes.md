@@ -1,321 +1,374 @@
-# Himam API — what changed, and what the app must do
+# Himam API — the reading and examination model
 
-Everything here changed in the API today. It is written for the mobile client:
-each section says what changed, what it means, and what the app has to do about
-it. Every payload is captured from a running API, not written from memory.
+What the mobile app needs to implement, and why each piece is shaped the way
+it is. Every payload below was captured from a running API against an account
+created for the purpose.
 
-The full reference is **api.md**; the examination flow in detail is
-**quiz-apis.md**. This document is only the delta.
+This replaces the earlier change list. If you read that one, three things it
+describes no longer exist — `exam.scope`, a section's `has_quiz`, and the
+per-section exam endpoints. The model is simpler now.
+
+The complete interface is **api.md**; examination in depth is **quiz-apis.md**.
 
 ---
 
-## At a glance
+## The rule, in one paragraph
 
-| # | Change | App must act |
+A book is **read in sections** and **examined once, over the whole of it**.
+Sections are the path through the reading; they carry no exam and nothing
+passes them. When every section has been read, the book's exam opens. Passing
+it finishes the book, and awards the points, any badges, and the book's
+certificate.
+
+A book may instead be one document with no sections. Then opening the book is
+the reading, and the same exam rule applies.
+
+---
+
+## 1. The one flag
+
+`GET /api/books/{book}` carries `quiz_button`. It is the only thing to consult
+when deciding whether to offer the exam.
+
+```json
+{
+  "visible": false,
+  "label": "ابدأ الاختبار",
+  "reason": "unread"
+}
+```
+
+| `reason` | Meaning | What to show |
 |---|---|---|
-| 1 | Reading is recorded by `POST`, not by fetching | **Yes** |
-| 2 | A book may be examined as a whole, not per section | **Yes** |
-| 3 | `exam` block says where the exam is | **Yes** |
-| 4 | The exam button's text and visibility come from the API | **Yes** |
-| 5 | Progress reports reading and passing separately | **Yes** |
-| 6 | A failed attempt no longer returns the answers | **Yes** |
-| 7 | Both exams answer with the same body | Simplifies |
-| 8 | A certificate per book, not only per level | **Yes** |
-| 9 | New notification categories: `certificate`, `badge` | Minor |
-| 10 | Exam 404s now explain themselves | Minor |
-| 11 | Media fields are absolute URLs | Check |
-| 12 | A section's document is per language | Check |
-| 13 | Deactivating a level withdraws its books | Handle |
+| `null` | the exam is open | the button, using `label` |
+| `unread` | the reading is not finished | no button; "finish the book first" |
+| `no_questions` | the exam has not been written | no button |
+| `hidden` | an editor turned it off | no button |
+| `not_signed_in` | nobody to examine | the sign-in prompt |
+
+`label` arrives already in the requested language. Render it; do not hard-code
+one.
+
+### It opens as the reading finishes
+
+The same book, after each section is marked read:
+
+```
+0 of 3 read   visible=false  reason=unread
+1 of 3 read   visible=false  reason=unread
+2 of 3 read   visible=false  reason=unread
+3 of 3 read   visible=true   reason=null
+```
+
+```json
+{
+  "visible": true,
+  "label": "ابدأ الاختبار",
+  "reason": null
+}
+```
 
 ---
 
-## 1. Reading is recorded explicitly
+## 2. Reading is recorded by the app
 
-**Before:** fetching `GET /api/sections/{id}` marked the section read.
-**Now:** it does not. The app says so.
+Opening a section is what counts as reading it, and the API does not infer that
+from a fetch — a prefetch, a retry or a cache warm is not a reader. So the app
+says so:
 
 ```http
 POST /api/sections/{section}/read
-POST /api/books/{book}/read
 ```
 
 ```json
 {
   "data": {
     "id": 1,
-    "read": true,
-    "passed": false
+    "read": true
   }
 }
 ```
 
-Why: a prefetch, a retry or a cache warm is not a reader, and all three were
-being counted as one.
-
-**What to do.** Send the `POST` when the reader actually opens the material.
-Use the book form only for a book with no sections — a book that has sections
-is tracked by those, and recording both gives two answers to how far they have
-got. If the call fails, ignore it; never block reading on it.
-
----
-
-## 2. A book may be examined as a whole
-
-A book is laid out in sections or as one document, and examined per section or
-once over the whole thing. These are now **separate** decisions, so three
-shapes exist:
-
-| | Layout | Exam | Finished when |
-|---|---|---|---|
-| **A** | one document | the book's | its exam is passed |
-| **B** | sections | the book's | its exam is passed |
-| **C** | sections | one per section | every section is passed |
-
-**B is new** and is what the programme mostly wants: the reader works through
-the sections, then sits one exam over the book.
-
-Endpoints:
+For a book that has **no sections**, the same thing at book level:
 
 ```http
-GET  /api/books/{book}/quiz        POST /api/books/{book}/quiz
-GET  /api/sections/{section}/quiz  POST /api/sections/{section}/quiz
+POST /api/books/{book}/read
 ```
 
-Only one of the two exists for any given book. The other answers `404`.
+Do not send both for one book. A book with sections is tracked by those.
 
----
+If the call fails, ignore it — never block reading on it.
 
-## 3. `exam` says where the exam is
-
-Do not work this out from section counts. `GET /api/books/{id}` tells you.
-
-A book in sections, examined as a whole (**shape B**):
+### What a section carries now
 
 ```json
 {
-  "scope": "book",
-  "button": {
-    "visible": true,
-    "label": "ابدأ الاختبار"
-  },
-  "questions_total": 9
-}
-```
-
-A book examined section by section (**shape C**):
-
-```json
-{
-  "scope": "sections",
-  "button": {
-    "visible": false,
-    "label": "ابدأ الاختبار"
-  },
-  "sections_with_quiz": 3
-}
-```
-
-| `exam.scope` | Call |
-|---|---|
-| `"book"` | `/api/books/{book}/quiz` |
-| `"sections"` | `/api/sections/{section}/quiz`, for each section whose `has_quiz` is true |
-| `"none"` | nothing — no questions written yet |
-
-Each section now carries `has_quiz` as well:
-
-```json
-{
-  "id": 4,
-  "book_id": 2,
+  "id": 1,
+  "book_id": 1,
   "title": "لماذا نقرأ بانتظام",
   "position": 1,
-  "questions_count": 3,
-  "has_quiz": true,
+  "body": "يبدأ هذا القسم بتحديد الغاية من القراءة: ما الذي يريد القارئ الوصول إليه بعد إتمام الكتاب، وكيف يُترجم ذلك إلى خطوات أسبوعية واضحة.\n\nثم ينتقل إلى الأدوات العملية: تقسيم الكتاب إلى أقسام متساوية، وتحديد وقت ثابت للقراءة، وتدوين الملاحظات على هامش النص أو في بطاقة مستقلة.\n\nويؤكد أن القراءة المنظمة ليست سرعة في الإنجاز، بل انتظام في المتابعة؛ فصفحات قليلة كل يوم أنفع من قراءة متقطعة تنقطع بعد أيام.\n\nوفي ختام القسم يُطلب من القارئ مراجعة ما قرأه بإيجاز، وكتابة ثلاث أفكار رئيسية بلغته الخاصة قبل الانتقال إلى الاختبار.",
   "pdf": "http://localhost:8000/storage/uploads/sample-section.pdf",
-  "read": false,
-  "passed": false
+  "read": true
 }
 ```
 
-`questions_count` drops to zero when the book claims the questions for its own
-exam, so it reads as "no quiz here" only if you already know that rule.
-`has_quiz` says it outright.
-
-**What to do.** Branch on `exam.scope`. In shape B or A, show one exam button
-for the book and **no** per-section exam buttons. In shape C, show a button per
-section.
+`read` is the only progress a section reports. There is no `passed`, no
+`has_quiz`, no `questions_count` — a section cannot be examined.
 
 ---
 
-## 4. The exam button comes from the API
+## 3. Progress
 
-Its text and whether it appears at all are set in the dashboard:
-
-```json
-"quiz_button": { "visible": true, "label": "اختبار الكتاب كاملاً" }
-```
-
-`visible` is the dashboard's switch **and** whether questions exist — a book
-whose exam has not been written reports `false` whatever the switch says.
-`label` is already in the requested language.
-
-**What to do.** Render the label the API gives; do not hard-code one. Show the
-button only when `visible` is true. This is how a book gets published for
-reading weeks before its exam exists.
-
----
-
-## 5. Progress reports reading and passing separately
-
-`progress` on every book gained two fields:
+Every book carries a `progress` block for the signed-in reader:
 
 ```json
 {
   "sections_total": 3,
   "sections_read": 1,
-  "sections_passed": 0,
   "read_percent": 33,
-  "percent": 0,
   "completed": false
 }
 ```
 
 | Field | Meaning |
 |---|---|
-| `sections_read` / `read_percent` | how far through the **reading** |
-| `sections_passed` / `percent` | how many section exams **passed** |
-| `completed` | the book is finished, by whichever rule applies to it |
+| `sections_total` | how many sections the book has |
+| `sections_read` | how many the reader has opened |
+| `read_percent` | the progress bar |
+| `completed` | the book is finished — its exam passed |
 
-In shapes A and B there are no section exams, so `sections_passed` and
-`percent` stay at `0` for ever.
-
-**What to do.** Drive the progress bar from `read_percent`, not `percent`, for
-any book whose `exam.scope` is `"book"` — otherwise a reader who has read every
-page sits at 0%. Use `completed` for "finished", never `percent == 100`.
-
----
-
-## 6. A failed attempt no longer returns the answers
-
-A failure:
+**Drive the bar from `read_percent`.** `completed` is a separate idea: reading
+every section gets you to 100% and opens the exam; passing the exam is what
+makes `completed` true.
 
 ```json
 {
-  "score": 0,
-  "total": 3,
-  "passed": false,
-  "points_awarded": 0,
-  "correct_options": null,
-  "incorrect_questions": [
-    55,
-    56,
-    57
-  ],
-  "new_badges": [],
-  "new_certificates": []
+  "sections_total": 3,
+  "sections_read": 3,
+  "read_percent": 100,
+  "completed": true
 }
 ```
 
-A pass:
-
-```json
-{
-  "score": 3,
-  "total": 3,
-  "passed": true,
-  "points_awarded": 500,
-  "correct_options": {
-    "55": 164,
-    "56": 167,
-    "57": 170
-  },
-  "incorrect_questions": []
-}
-```
-
-- **Failed** → `correct_options` is `null`, and `incorrect_questions` lists the
-  question ids answered wrongly.
-- **Passed** → `correct_options` maps question id to the correct option id.
-
-Why: a resit is free and unlimited, so returning the key after a failure would
-make the first attempt a way of being told the answers and the second a
-formality.
-
-**What to do.** After a pass, mark right and wrong as before. After a failure,
-mark the reader's own answers on the questions in `incorrect_questions` and
-mark **nothing** as correct. Reading a missing `correct_options` as "everything
-is wrong" would redden a paper the reader got most of right.
+Anonymous visitors get no `progress` block at all, rather than zeroes that
+would read as "you have done nothing".
 
 ---
 
-## 7. Both exams answer with the same body
+## 4. The exam
 
-`POST /api/books/{id}/quiz` used to wrap its result in `data` and `meta` while
-the section exam returned a flat body. Both are flat now:
-
-```
-score, total, passed, points_awarded,
-correct_options, incorrect_questions,
-new_badges, new_certificates, stats
+```http
+GET  /api/books/{book}/quiz
+POST /api/books/{book}/quiz
 ```
 
-**What to do.** One result screen serves both. If you wrote a branch for the
-two shapes, delete it.
+There is no other exam endpoint. `/api/sections/{id}/quiz` has been removed.
 
-`GET` on either exam returns `data` (the questions) and `meta`, where `meta`
-carries `taken`, `attempts`, `passed`, `best_score` and `last_attempt`:
+### Asking too early
+
+The flag is not the only guard — the endpoint enforces the same rule, so a
+client that ignores `quiz_button` still cannot sit the exam early:
+
+`403`
+
+```json
+{
+  "message": "اقرأ الكتاب كاملاً قبل أداء اختباره.",
+  "exception": "Symfony\\Component\\HttpKernel\\Exception\\HttpException",
+  "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Application.php",
+  "line": 1440,
+  "trace": [
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\helpers.php",
+      "line": 67,
+      "function": "abort",
+      "class": "Illuminate\\Foundation\\Application",
+      "type": "->"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\helpers.php",
+      "line": 104,
+      "function": "abort"
+    },
+    {
+      "file": "D:\\xa73\\htdocs\\Himam-Backend\\app\\Http\\Controllers\\Api\\BookQuizController.php",
+      "line": 138,
+      "function": "abort_unless"
+    },
+    {
+  …
+```
+
+### The paper
+
+Questions, without the answers. The key is held server-side and never sent
+before grading.
+
+```json
+{
+  "id": 1,
+  "text": "ما الغاية الأولى التي يبدأ بها القسم؟",
+  "position": 1,
+  "options": [
+    {
+      "id": 1,
+      "text": "تحديد الغاية من القراءة",
+      "position": 0
+    },
+    {
+      "id": 2,
+      "text": "حفظ فهرس الكتاب",
+      "position": 1
+    },
+    {
+      "id": 3,
+      "text": "قراءة الخاتمة أولاً",
+      "position": 2
+    }
+  ]
+}
+```
+
+`meta` carries what the screen needs to present it:
 
 ```json
 {
   "book": {
-    "id": 7,
-    "title": "الرسالة في أصول الفقه"
+    "id": 1,
+    "title": "مقدمة في القراءة المنظمة"
   },
-  "questions_total": 3,
+  "questions_total": 9,
   "pass_ratio": 0.6,
   "quiz_button": {
-    "visible": true,
-    "label": "اختبار الكتاب كاملاً"
+    "visible": false,
+    "label": "ابدأ الاختبار",
+    "reason": "not_signed_in"
   },
-  "taken": true,
-  "attempts": 2,
-  "passed": true,
-  "best_score": 3,
-  "last_attempt": {
-    "score": 0,
-    "total": 3,
-    "passed": false,
-    "created_at": "2026-10-16T18:24:16+00:00"
-  }
+  "taken": false,
+  "attempts": 0,
+  "passed": false,
+  "best_score": null,
+  "last_attempt": null
 }
 ```
 
-**What to do.** Use `taken` to label the button "retake" rather than "start",
-and show `attempts` and `best_score` before the reader begins. `passed` stays
-true after a later failure — a resit cannot take a pass away.
+| Field | Use |
+|---|---|
+| `taken`, `attempts` | label the button "retake" rather than "start" |
+| `passed` | stays true after a later failure — a resit cannot undo a pass |
+| `best_score` | show it before they begin |
+| `last_attempt` | score, total, result and time of the most recent try |
+| `pass_ratio` | the fraction needed, e.g. `0.6` |
 
-A retake is recorded but pays nothing:
+### Submitting
+
+```json
+{ "answers": { "<question id>": <option id>, … } }
+```
+
+A question left out counts as wrong.
+
+---
+
+## 5. Results
+
+**A failure returns no answers.** A resit is free and unlimited, so handing
+back the key would make the first attempt a way of being told them:
 
 ```json
 {
-  "score": 3,
-  "total": 3,
+  "score": 5,
+  "total": 9,
+  "passed": false,
+  "points_awarded": 0,
+  "correct_options": null,
+  "incorrect_questions": [
+    2,
+    3,
+    6,
+    8
+  ],
+  "new_badges": [
+    {
+      "id": 1,
+      "name": "المثابر",
+      "description": "أنهيت أول قسم من أقسام البرنامج.",
+      "image": "http://localhost:8000/assets/badge.png",
+      "criteria_type": "sections_read",
+      "criteria_value": 1,
+      "position": 0
+    }
+  ],
+  "new_certificates": []
+}
+```
+
+**A pass returns everything it produced** — the key, the points, the badges,
+the certificates, and the reader's recalculated standing:
+
+```json
+{
+  "score": 9,
+  "total": 9,
+  "passed": true,
+  "points_awarded": 400,
+  "correct_options": {
+    "1": 1,
+    "2": 5,
+    "3": 8,
+    "4": 10,
+    "5": 13,
+    "6": 17,
+    "7": 19,
+    "8": 23,
+    "9": 25
+  },
+  "incorrect_questions": [],
+  "new_certificates": [
+    {
+      "id": 28,
+      "serial": "CERT-2026-VJBDJC",
+      "title": "مقدمة في القراءة المنظمة",
+      "issued_at": "2026-10-16",
+      "verification_url": "http://localhost/api/certificates/verify/101af2ad-41db-4fd9-8b7d-fb022127b208"
+    }
+  ]
+}
+```
+
+- **Failed** → `correct_options` is `null`; `incorrect_questions` lists what
+  to go back and read.
+- **Passed** → `correct_options` maps question id to the correct option id.
+
+Mark the reader's own wrong answers either way. After a failure, mark
+**nothing** as correct — reading a missing `correct_options` as "everything is
+wrong" would redden a paper they got most of right.
+
+### A retake is free and pays nothing
+
+```json
+{
+  "score": 9,
+  "total": 9,
   "passed": true,
   "points_awarded": 0,
+  "incorrect_questions": [],
   "new_badges": [],
   "new_certificates": []
 }
 ```
 
-The certificate is re-dated, not reissued: its serial and verification code
-stay the same, because they are printed on copies that must keep verifying.
+The certificate is **re-dated, not reissued**: its serial and verification
+code stay the same, because they are printed on copies that must keep
+verifying.
 
 ---
 
-## 8. A certificate per book
+## 6. Certificates
 
-Certificates used to be per level only. A book now earns one the moment it is
-finished. `GET /api/certificates/available` says which is which:
+A certificate per book, and one per level when all its books are done.
+`GET /api/certificates/available` lists everything issuable:
 
 ```json
 {
@@ -326,121 +379,102 @@ finished. `GET /api/certificates/available` says which is which:
   },
   "level": null,
   "title": "مقدمة في القراءة المنظمة",
-  "earned": false,
-  "serial": null,
-  "issued_at": null,
-  "verification_url": null,
-  "sections_passed": 0,
+  "earned": true,
+  "serial": "CERT-2026-VJBDJC",
+  "issued_at": "2026-10-16",
+  "verification_url": "http://localhost/api/certificates/verify/101af2ad-41db-4fd9-8b7d-fb022127b208",
+  "sections_read": 3,
   "sections_total": 3,
-  "percent": 0
+  "percent": 100
 }
 ```
 
-Each row carries `scope`, either `"book"` or `"level"`, plus `percent` towards
-it.
-
-**What to do.** Group or label by `scope`. A reader finishing the last book of
-a level receives **two** certificates at once, so a screen that assumes one per
-event will drop the other.
+`scope` is `book` or `level`. A reader finishing the last book of a level
+earns **both at once**, so a screen that assumes one per event will drop the
+other.
 
 ---
 
-## 9. Two new notification categories
+## 7. Notifications
 
-`certificate` and `badge` join `program`, `exam`, `results`, `honor` and
-`general`. They arrive in the same feed and count towards `meta.unread`:
+`certificate` and `badge` are issued automatically and arrive in the same feed
+as the dashboard's announcements, counting towards `meta.unread`:
 
 ```json
 [
   {
-    "id": 79,
+    "category": "badge",
+    "title": "حصلت على وسام المثابر"
+  },
+  {
     "category": "badge",
     "title": "حصلت على وسام متمم الكتاب"
   },
   {
-    "id": 80,
     "category": "certificate",
-    "title": "صدرت شهادتك في «الرسالة في أصول الفقه»"
-  },
-  {
-    "id": 1,
-    "category": "program",
-    "title": "إطلاق برنامج القراءة المنظمة — الفصل الأول"
+    "title": "صدرت شهادتك في «مقدمة في القراءة المنظمة»"
   }
 ]
 ```
 
-**What to do.** Give the two new categories an icon and a label. They are
-mutable like any other through `PUT /api/notification-preferences`, so add them
-to the notification settings screen.
+The full set: `certificate`, `badge`, `program`, `exam`, `results`, `honor`,
+`general`. All mutable through `PUT /api/notification-preferences`.
 
 ---
 
-## 10. Exam 404s explain themselves
+## 8. Errors
 
-Asking for the wrong exam used to answer `404` with an empty message. Now:
+| Status | When | What to do |
+|---|---|---|
+| `401` | no token, or revoked | send them back to sign in |
+| `403` | the book is not read yet, or an earlier book in a sequential programme is unfinished | show the message; it is written for the reader |
+| `404` | unpublished, withdrawn with its level, or in a selective programme they are not assigned to | treat as absent, not as an error |
+| `422` | the body failed validation | show `errors` against the fields |
+
+A `404` on a book the app has cached is normal — it may have been withdrawn
+since. Treat it as "no longer available" and return to the catalogue.
 
 ```json
 {
-  "GET /api/books/2/quiz": {
-    "message": "هذا الكتاب يُختبر على أقسامه، فليس له اختبار على الكتاب كاملاً."
-  },
-  "GET /api/sections/1/quiz": {
-    "message": "هذا الكتاب يُختبر كاملاً، فليس لأقسامه اختبارات منفصلة."
+  "message": "The answers field must be present.",
+  "errors": {
+    "answers": [
+      "The answers field must be present."
+    ]
   }
 }
 ```
 
-**What to do.** Nothing required, but these are worth surfacing while
-integrating — an empty 404 is what made this hard to diagnose in the first
-place.
+---
+
+## 9. Other things worth knowing
+
+**Media fields are absolute URLs.** `cover`, `image`, `avatar` and `pdf` come
+back ready to use. Do not prefix them. `null` means nothing was uploaded.
+
+**A document is per language.** `pdf` on a book or section is resolved to the
+requested language before it is sent — one string, not a map.
+
+**Language** comes from `?lang=ar`, `X-Locale`, `Accept-Language`, the reader's
+saved language, then the dashboard default — first match wins. A field with no
+translation falls back rather than coming back empty.
+
+**Deactivating a level withdraws its books**: they leave the catalogue, their
+sections and exam answer `404`, and they leave the totals.
 
 ---
 
-## 11. Media fields are absolute URLs
+## What to build, in order
 
-`cover`, `image`, `avatar` and `pdf` come back ready to use:
+1. **Record reading** — `POST /api/sections/{id}/read` when a section is
+   opened. Nothing is recorded until the app sends it, and nothing else works
+   without it.
+2. **The exam button** — read `quiz_button.visible`, render `label`, and show
+   `reason` when it is shut so the reader knows what is left.
+3. **The exam** — `GET`/`POST /api/books/{id}/quiz`, one screen.
+4. **The result** — handle the withheld key on a failure.
+5. **Progress** — `read_percent` for the bar, `completed` for finished.
+6. **Certificates and notifications** — `scope`, and the two automatic
+   categories.
 
-```json
-"cover": "https://himam-back.onrender.com/assets/banner.svg"
-```
-
-**What to do.** Do not prefix them with a base URL. `null` means nothing was
-uploaded.
-
----
-
-## 12. A section's document is per language
-
-`pdf` on a section, and on a book, is resolved to the requested language before
-it is sent — one string, not a map. Send `Accept-Language` (or `?lang=`) and
-you get that language's document, falling back when it has none.
-
----
-
-## 13. Deactivating a level withdraws its books
-
-A level with `is_active = false` now removes its books from the reader-facing
-API entirely: they leave `/api/books`, they leave reading programmes, and the
-book, its sections and its exams all answer `404`. They also leave both sides
-of every total, so `books_total` and `sections_total` count only what the
-reader can reach.
-
-**What to do.** Handle a `404` on a book or section the app has cached — it may
-have been withdrawn since. Treat it as "no longer available" rather than an
-error, and send the reader back to the catalogue.
-
----
-
-## Suggested order of work
-
-1. **Reading** — switch to `POST .../read` (§1). Without it nothing is recorded.
-2. **Exam routing** — branch on `exam.scope` (§2, §3) and render the API's
-   button (§4). This is what unblocks the reader stuck after finishing a book.
-3. **Result screen** — handle the withheld key (§6) and the single body (§7).
-4. **Progress** — read from `read_percent` and `completed` (§5).
-5. **Certificates and notifications** — `scope`, and the two new categories
-   (§8, §9).
-6. **Robustness** — absolute media (§11), withdrawn content (§13).
-
-Steps 1 and 2 are the ones a reader notices immediately. The rest can follow.
+Steps 1 to 3 are what a reader notices. The rest can follow.

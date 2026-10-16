@@ -88,7 +88,7 @@ blocking it.
         "status": "available",
         "blocked_by": null,
         "completed": false,
-        "sections_passed": 0,
+        "sections_read": 0,
         "sections_total": 3
       },
       {
@@ -99,7 +99,7 @@ blocking it.
         "status": "locked",
         "blocked_by": 1,
         "completed": false,
-        "sections_passed": 0,
+        "sections_read": 0,
         "sections_total": 3
       }
     ],
@@ -108,6 +108,10 @@ blocking it.
   }
 }
 ```
+
+Each row reports `sections_read` of `sections_total` — sections are read,
+not passed, because the exam belongs to the book. `completed` means that
+book's exam has been passed.
 
 | Field | Meaning |
 | --- | --- |
@@ -134,8 +138,9 @@ content checks first:
 ```
 GET  /books/{id}
 GET  /sections/{id}
-GET  /sections/{id}/quiz
-POST /sections/{id}/quiz
+POST /sections/{id}/read
+GET  /books/{id}/quiz
+POST /books/{id}/quiz
 ```
 
 Calling any of them for a book the chain has not reached:

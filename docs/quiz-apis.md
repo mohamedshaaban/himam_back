@@ -1,1592 +1,180 @@
-# Himam — the quiz, end to end
+# Himam — the exam, end to end
 
-How a reader is examined, what the API asks for at each step, and what it
-answers. Every request and response below was captured from a running API
-against a reader created for the purpose; none of it was written by hand.
+How a reader is examined: what opens the exam, what the API asks for at each
+step, and what it answers. Every payload below was captured from a running API
+against an account created for the purpose.
 
-Base path `/api`. Every endpoint here needs `Authorization: Bearer <token>`
-from `POST /api/auth/login` or `POST /api/auth/register`. `Accept-Language`
-decides the language of the questions, the button wording and the messages; the
-examples use `en`.
+The complete interface is **api.md**. What the mobile client has to build is
+**mobile-changes.md**, which covers the same ground more briefly.
 
 ---
 
-## 1. Layout and examination are separate decisions
+## The rule, in one paragraph
 
-**How a book is laid out** follows from whether it has sections. A book with
-sections is read part by part; a book without them is read as one document.
+A book is **read in sections** and **examined once, over the whole of it**.
+Sections are the path through the reading; they carry no exam and nothing
+passes them. When every section has been read, the book's exam opens. Passing
+it finishes the book, and awards the points, any badges, and the book's
+certificate.
 
-**Where its exam lives** follows from where the questions were written. If a
-book has questions of its own, it is examined once over all of it and the
-section quizzes stop being offered. If it has none, each section carries its
-own quiz.
+A book may instead be one document with no sections. Then opening the book is
+the reading, and the same exam rule applies.
 
-The two are independent, so three shapes exist in practice:
+---
 
-| | Layout | Exam | Finished when |
-|---|---|---|---|
-| **A** | one document | the book's own | the book's exam is passed |
-| **B** | sections | the book's own | the book's exam is passed |
-| **C** | sections | one per section | every section is passed |
+## 1. The one flag
 
-Shape **B** is the one the programme asks for most: the sections are the way
-through the reading, and the examination happens once at the end.
-
-A book can also carry the whole text as one document beside its sections, in
-any shape.
-
-### Reading each shape off the payload
-
-`sections` and `has_own_quiz` say which shape a book is in.
-
-| Field | Meaning |
-|---|---|
-| `sections` / `sections_count` | empty means it is read as one document |
-| `has_own_quiz` | true means the exam is the book's, not the sections' |
-| `quiz_button.visible` | whether to offer the book's exam at all |
-| `quiz_button.label` | what the button should say, in the requested language |
-| `pdf` | the whole-book document, if one was uploaded |
-
-#### Read as one document, examined as a whole
-
-Shape **A**. No sections, a document of its own, its own exam.
-
-```http
-GET /api/books/7
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-```
-
-`200`
+`GET /api/books/{book}` carries `quiz_button`. It is the only thing to consult
+when deciding whether to offer the exam.
 
 ```json
 {
-  "data": {
-    "id": 7,
-    "title": "A book read whole",
-    "author": "The author",
-    "description": "Read as one document.",
-    "cover": null,
-    "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
-    "has_own_quiz": true,
-    "quiz_button": {
-      "visible": true,
-      "label": "Exam on the whole book"
-    },
-    "exam": {
-      "scope": "book",
-      "button": {
-        "visible": true,
-        "label": "Exam on the whole book"
-      },
-      "questions_total": 3
-    },
-    "pages": 120,
-    "points": 500,
-    "position": 10,
-    "level": {
-      "id": 1,
-      "name": "First Level",
-      "description": "An introduction to structured reading and its basic tools.",
-      "position": 1
-    },
-    "sections": [],
-    "progress": {
-      "sections_total": 0,
-      "sections_read": 0,
-      "sections_passed": 0,
-      "read_percent": 0,
-      "percent": 0,
-      "completed": false
-    }
-  }
+  "visible": false,
+  "label": "ابدأ الاختبار",
+  "reason": "unread"
 }
 ```
 
-#### Read in sections, examined as a whole
+| `reason` | Meaning | What to show |
+|---|---|---|
+| `null` | the exam is open | the button, using `label` |
+| `unread` | the reading is not finished | no button; "finish the book first" |
+| `no_questions` | the exam has not been written | no button |
+| `hidden` | an editor turned it off | no button |
+| `not_signed_in` | nobody to examine | the sign-in prompt |
 
-Shape **B**. Three sections for the reading, and `has_own_quiz` is true — so the exam is the book's, and the sections carry none.
+`label` arrives already in the requested language. Render it; do not hard-code
+one.
 
-```http
-GET /api/books/1
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
+### It opens as the reading finishes
+
+The same book, after each section is marked read:
+
+```
+0 of 3 read   visible=false  reason=unread
+1 of 3 read   visible=false  reason=unread
+2 of 3 read   visible=false  reason=unread
+3 of 3 read   visible=true   reason=null
 ```
 
-`200`
+```json
+{
+  "visible": true,
+  "label": "ابدأ الاختبار",
+  "reason": null
+}
+```
+
+---
+
+## 2. Reading is recorded by the app
+
+Opening a section is what counts as reading it, and the API does not infer that
+from a fetch — a prefetch, a retry or a cache warm is not a reader. So the app
+says so:
+
+```http
+POST /api/sections/{section}/read
+```
 
 ```json
 {
   "data": {
     "id": 1,
-    "title": "Introduction to Structured Reading",
-    "author": "Prepared by the programme administration",
-    "description": "A practical introduction to what structured reading means and the tools it uses, setting out a weekly plan that begins with a goal and ends with a review.",
-    "cover": "http://127.0.0.1:8005/assets/banner.svg",
-    "pdf": null,
-    "has_own_quiz": true,
-    "quiz_button": {
-      "visible": true,
-      "label": "Take the quiz"
-    },
-    "exam": {
-      "scope": "book",
-      "button": {
-        "visible": true,
-        "label": "Take the quiz"
-      },
-      "questions_total": 9
-    },
-    "pages": 140,
-    "points": 400,
-    "position": 0,
-    "level": {
-      "id": 1,
-      "name": "First Level",
-      "description": "An introduction to structured reading and its basic tools.",
-      "position": 1
-    },
-    "sections": [
-      {
-        "id": 1,
-        "book_id": 1,
-        "title": "Why We Read Regularly",
-        "position": 1,
-        "questions_count": 0,
-        "has_quiz": false,
-        "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
-        "read": false,
-        "passed": false
-      },
-      {
-        "id": 2,
-        "book_id": 1,
-        "title": "Building a Reading Plan",
-        "position": 2,
-        "questions_count": 0,
-        "has_quiz": false,
-        "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
-        "read": false,
-        "passed": false
-      },
-      {
-        "id": 3,
-        "book_id": 1,
-        "title": "Review and Summary",
-        "position": 3,
-        "questions_count": 0,
-  …
-```
-
-#### Read in sections, examined section by section
-
-Shape **C**. `has_own_quiz` is false and `quiz_button.visible` with it; each section is examined on its own.
-
-```http
-GET /api/books/2
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-```
-
-`200`
-
-```json
-{
-  "data": {
-    "id": 2,
-    "title": "Foundations of Systematic Thinking",
-    "author": "Prepared by the programme administration",
-    "description": "Sets out the rules of ordered thinking and how to apply them to what you read, so a text becomes understanding rather than scattered facts.",
-    "cover": "http://127.0.0.1:8005/assets/banner.svg",
-    "pdf": null,
-    "has_own_quiz": false,
-    "quiz_button": {
-      "visible": false,
-      "label": "Take the quiz"
-    },
-    "exam": {
-      "scope": "sections",
-      "button": {
-        "visible": false,
-        "label": "Take the quiz"
-      },
-      "sections_with_quiz": 3
-    },
-    "pages": 165,
-    "points": 400,
-    "position": 1,
-    "level": {
-      "id": 1,
-      "name": "First Level",
-      "description": "An introduction to structured reading and its basic tools.",
-      "position": 1
-    },
-    "sections": [
-      {
-        "id": 4,
-        "book_id": 2,
-        "title": "Why We Read Regularly",
-        "position": 1,
-        "questions_count": 3,
-        "has_quiz": true,
-        "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
-        "read": false,
-        "passed": false
-      },
-      {
-        "id": 5,
-        "book_id": 2,
-        "title": "Building a Reading Plan",
-        "position": 2,
-        "questions_count": 3,
-        "has_quiz": true,
-        "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
-  …
-```
-
----
-
-## 2. The quiz button comes from the API
-
-Whether the exam is offered, and what the button says, are set in the dashboard
-rather than built into the apps. A book can be published for reading weeks
-before its questions are written, and the wording differs between a first
-sitting and a resit; neither should need a release.
-
-```json
-"quiz_button": {
-  "visible": true,
-  "label": "Exam on the whole book"
-}
-```
-
-`visible` is the dashboard's switch **and** the existence of the book's own
-questions: a book examined by section, or one whose questions have not been
-written yet, reports `false` whatever the switch says. `label` falls back to
-the translated default when the dashboard has set nothing.
-
-The client renders what it is told. It must not decide for itself that a book
-should show a button.
-
-The dashboard sets both through `PUT /api/admin/books/{id}`:
-
-```json
-{
-  "quiz_button_visible": true,
-  "quiz_button_label": { "ar": "اختبار الكتاب كاملاً", "en": "Exam on the whole book" }
-}
-```
-
-and writes the book's own questions through `POST /api/admin/books/{id}/questions`,
-which is what moves the exam from the sections to the book.
-
----
-
-## 3. Opening the material
-
-Opening the material is what counts as reading it. The API does not infer this
-from a fetch of the questions — a prefetch or a retry is not a reader — so the
-client says so explicitly.
-
-#### Record that a whole-book document was opened
-
-For a book read as one document.
-
-```http
-POST /api/books/7/read
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-```
-
-`200`
-
-```json
-{
-  "data": {
-    "id": 7,
     "read": true
   }
 }
 ```
 
-#### Record that a section was opened
-
-For a section. A book that has sections is tracked by those, so a client does not also record a read against the book — that would give two answers to how far the reader has got.
+For a book that has **no sections**, the same thing at book level:
 
 ```http
-POST /api/sections/1/read
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
+POST /api/books/{book}/read
 ```
 
-`200`
+Do not send both for one book. A book with sections is tracked by those.
+
+If the call fails, ignore it — never block reading on it.
+
+### What a section carries now
 
 ```json
 {
-  "data": {
-    "id": 1,
-    "read": true,
-    "passed": false
-  }
+  "id": 1,
+  "book_id": 1,
+  "title": "لماذا نقرأ بانتظام",
+  "position": 1,
+  "body": "يبدأ هذا القسم بتحديد الغاية من القراءة: ما الذي يريد القارئ الوصول إليه بعد إتمام الكتاب، وكيف يُترجم ذلك إلى خطوات أسبوعية واضحة.\n\nثم ينتقل إلى الأدوات العملية: تقسيم الكتاب إلى أقسام متساوية، وتحديد وقت ثابت للقراءة، وتدوين الملاحظات على هامش النص أو في بطاقة مستقلة.\n\nويؤكد أن القراءة المنظمة ليست سرعة في الإنجاز، بل انتظام في المتابعة؛ فصفحات قليلة كل يوم أنفع من قراءة متقطعة تنقطع بعد أيام.\n\nوفي ختام القسم يُطلب من القارئ مراجعة ما قرأه بإيجاز، وكتابة ثلاث أفكار رئيسية بلغته الخاصة قبل الانتقال إلى الاختبار.",
+  "pdf": "http://localhost:8000/storage/uploads/sample-section.pdf",
+  "read": true
 }
 ```
 
-### Reading and passing are reported separately
+`read` is the only progress a section reports. There is no `passed`, no
+`has_quiz`, no `questions_count` — a section cannot be examined.
 
-A book examined as a whole has no section passes to count. If progress were a
-single number drawn from passes, a reader who had read every page would sit at
-zero with nothing to show for it. So the `progress` block carries both.
+---
 
-#### Reading progress after one section
+## 3. Progress
 
-One of three sections read, none passed — because on this book there is nothing to pass until the book's own exam.
-
-```http
-GET /api/books/1
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-```
-
-`200`
+Every book carries a `progress` block for the signed-in reader:
 
 ```json
 {
-  "data": {
-    "id": 1,
-    "title": "Introduction to Structured Reading",
-    "author": "Prepared by the programme administration",
-    "description": "A practical introduction to what structured reading means and the tools it uses, setting out a weekly plan that begins with a goal and ends with a review.",
-    "cover": "http://127.0.0.1:8005/assets/banner.svg",
-    "pdf": null,
-    "has_own_quiz": true,
-    "quiz_button": {
-      "visible": true,
-      "label": "Take the quiz"
-    },
-    "exam": {
-      "scope": "book",
-      "button": {
-        "visible": true,
-        "label": "Take the quiz"
-      },
-      "questions_total": 9
-    },
-    "pages": 140,
-    "points": 400,
-    "position": 0,
-    "level": {
-      "id": 1,
-      "name": "First Level",
-      "description": "An introduction to structured reading and its basic tools.",
-      "position": 1
-    },
-    "sections": [
-      {
-        "id": 1,
-        "book_id": 1,
-        "title": "Why We Read Regularly",
-        "position": 1,
-        "questions_count": 0,
-        "has_quiz": false,
-        "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
-        "read": true,
-        "passed": false
-      },
-      {
-        "id": 2,
-        "book_id": 1,
-        "title": "Building a Reading Plan",
-        "position": 2,
-        "questions_count": 0,
-        "has_quiz": false,
-        "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
-        "read": false,
-        "passed": false
-      },
-      {
-        "id": 3,
-        "book_id": 1,
-  …
+  "sections_total": 3,
+  "sections_read": 1,
+  "read_percent": 33,
+  "completed": false
+}
 ```
 
 | Field | Meaning |
 |---|---|
 | `sections_total` | how many sections the book has |
 | `sections_read` | how many the reader has opened |
-| `sections_passed` | how many section quizzes they have passed — always `0` in shapes A and B |
-| `read_percent` | reading progress |
-| `percent` | passing progress |
-| `completed` | the book is finished: its own exam passed, or every section passed |
+| `read_percent` | the progress bar |
+| `completed` | the book is finished — its exam passed |
 
-`completed` is the one to trust for "has this reader finished the book". It
-follows whichever rule applies to that book's shape.
+**Drive the bar from `read_percent`.** `completed` is a separate idea: reading
+every section gets you to 100% and opens the exam; passing the exam is what
+makes `completed` true.
+
+```json
+{
+  "sections_total": 3,
+  "sections_read": 3,
+  "read_percent": 100,
+  "completed": true
+}
+```
+
+Anonymous visitors get no `progress` block at all, rather than zeroes that
+would read as "you have done nothing".
 
 ---
 
-## 4. Fetching the paper
-
-The questions come without the answers. The key is held server-side and is
-never sent before grading.
-
-#### The exam, before any attempt
-
-`meta` carries everything a screen needs to say "start" rather than "retake": `taken`, `attempts`, `passed`, `best_score` and the last attempt. All of them are empty here.
+## 4. The exam
 
 ```http
-GET /api/books/7/quiz
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
+GET  /api/books/{book}/quiz
+POST /api/books/{book}/quiz
 ```
 
-`200`
+There is no other exam endpoint. `/api/sections/{id}/quiz` has been removed.
+
+### Asking too early
+
+The flag is not the only guard — the endpoint enforces the same rule, so a
+client that ignores `quiz_button` still cannot sit the exam early:
+
+`403`
 
 ```json
 {
-  "data": [
-    {
-      "id": 55,
-      "text": "Question 1?",
-      "position": 1,
-      "options": [
-        {
-          "id": 163,
-          "text": "Option 1",
-          "position": 1
-        },
-        {
-          "id": 164,
-          "text": "Option 2",
-          "position": 2
-        },
-        {
-          "id": 165,
-          "text": "Option 3",
-          "position": 3
-        }
-      ]
-    },
-    {
-      "id": 56,
-      "text": "Question 2?",
-      "position": 2,
-      "options": [
-        {
-          "id": 166,
-          "text": "Option 1",
-          "position": 1
-        },
-        {
-          "id": 167,
-          "text": "Option 2",
-          "position": 2
-        },
-        {
-          "id": 168,
-          "text": "Option 3",
-          "position": 3
-        }
-      ]
-    },
-    {
-      "id": 57,
-      "text": "Question 3?",
-      "position": 3,
-      "options": [
-        {
-          "id": 169,
-          "text": "Option 1",
-          "position": 1
-        },
-        {
-          "id": 170,
-          "text": "Option 2",
-          "position": 2
-        },
-        {
-          "id": 171,
-          "text": "Option 3",
-          "position": 3
-        }
-      ]
-    }
-  ],
-  "meta": {
-    "book": {
-      "id": 7,
-      "title": "A book read whole"
-    },
-    "questions_total": 3,
-    "pass_ratio": 0.6,
-    "quiz_button": {
-      "visible": true,
-      "label": "Exam on the whole book"
-    },
-    "taken": false,
-    "attempts": 0,
-    "passed": false,
-    "best_score": null,
-    "last_attempt": null
-  }
-}
-```
-
-### What `meta` means
-
-| Field | Meaning |
-|---|---|
-| `taken` | whether this reader has sat the exam at all |
-| `attempts` | how many times |
-| `passed` | whether any attempt passed — a later failure does not take this back |
-| `best_score` | the highest score across attempts |
-| `last_attempt` | the most recent attempt's score, total, result and time |
-| `pass_ratio` | the fraction of correct answers needed, e.g. `0.6` |
-| `questions_total` | how many questions the paper has |
-| `quiz_button` | as above |
-
----
-
-## 5. Submitting
-
-The body is one object: `answers`, mapping question id to the chosen option id.
-Every question the paper asked should be a key; a question left out counts as
-wrong.
-
-#### A failing attempt
-
-Every answer wrong on purpose. Note what comes back and what does not.
-
-```http
-POST /api/books/7/quiz
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "answers": {
-    "55": 163,
-    "56": 166,
-    "57": 169
-  }
-}
-```
-
-`200`
-
-```json
-{
-  "score": 0,
-  "total": 3,
-  "passed": false,
-  "points_awarded": 0,
-  "correct_options": null,
-  "incorrect_questions": [
-    55,
-    56,
-    57
-  ],
-  "new_badges": [],
-  "new_certificates": [],
-  "stats": {
-    "points": 0,
-    "sections_passed": 0,
-    "sections_total": 19,
-    "books_completed": 0,
-    "books_total": 8,
-    "badges_earned": 0,
-    "certificates": 0
-  }
-}
-```
-
-**The key is withheld from a failed attempt.** A resit is free and unlimited,
-so returning the answers after a failure would turn the first attempt into a way
-of being told them and the second into a formality. Instead the reader is told
-*which questions* they got wrong, which is what they need in order to go back
-and read again:
-
-- `correct_options` — `null`
-- `incorrect_questions` — the ids of the questions answered wrongly
-
-Nothing is charged for a failure: `points_awarded` is `0`, no badge, no
-certificate, and the reader's standing is unchanged.
-
-#### The exam, after failing
-
-`taken` is now true and `passed` is still false, so a screen can offer a resit and show what the last attempt scored.
-
-```http
-GET /api/books/7/quiz
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-```
-
-`200`
-
-```json
-{
-  "data": [
-    {
-      "id": 55,
-      "text": "Question 1?",
-      "position": 1,
-      "options": [
-        {
-          "id": 163,
-          "text": "Option 1",
-          "position": 1
-        },
-        {
-          "id": 164,
-          "text": "Option 2",
-          "position": 2
-        },
-        {
-          "id": 165,
-          "text": "Option 3",
-          "position": 3
-        }
-      ]
-    },
-    {
-      "id": 56,
-      "text": "Question 2?",
-      "position": 2,
-      "options": [
-        {
-          "id": 166,
-          "text": "Option 1",
-          "position": 1
-        },
-        {
-          "id": 167,
-          "text": "Option 2",
-          "position": 2
-        },
-        {
-          "id": 168,
-          "text": "Option 3",
-          "position": 3
-        }
-      ]
-    },
-    {
-      "id": 57,
-      "text": "Question 3?",
-      "position": 3,
-      "options": [
-        {
-          "id": 169,
-          "text": "Option 1",
-  …
-```
-
----
-
-## 6. Passing
-
-Passing means the fraction of correct answers reaches `pass_ratio`.
-
-#### A passing attempt
-
-Now the key comes back, along with everything the pass produced.
-
-```http
-POST /api/books/7/quiz
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "answers": {
-    "55": 164,
-    "56": 167,
-    "57": 170
-  }
-}
-```
-
-`200`
-
-```json
-{
-  "score": 3,
-  "total": 3,
-  "passed": true,
-  "points_awarded": 500,
-  "correct_options": {
-    "55": 164,
-    "56": 167,
-    "57": 170
-  },
-  "incorrect_questions": [],
-  "new_badges": [
-    {
-      "id": 3,
-      "name": "Book Finisher",
-      "description": "Completed every section of one book.",
-      "image": "http://127.0.0.1:8005/assets/badge.png",
-      "criteria_type": "books_completed",
-      "criteria_value": 1,
-      "position": 2
-    }
-  ],
-  "new_certificates": [
-    {
-      "id": 30,
-      "serial": "CERT-2026-O0GXPF",
-      "title": "A book read whole",
-      "issued_at": "2026-10-16",
-      "verification_url": "http://127.0.0.1:8005/api/certificates/verify/cd3f70f7-e93a-42cd-870f-47d906851c3b"
-    }
-  ],
-  "stats": {
-    "points": 500,
-    "sections_passed": 0,
-    "sections_total": 19,
-    "books_completed": 1,
-    "books_total": 8,
-    "badges_earned": 1,
-    "certificates": 1
-  }
-}
-```
-
-A pass does four things at once, and the response says so rather than making
-the client go and look:
-
-1. **Points** — `points_awarded`, credited once. The book's own `points`, or the
-   programme default when the book sets none.
-2. **Badges** — `new_badges`, any whose threshold this pass crossed.
-3. **Certificates** — `new_certificates`, for the book just finished, and for
-   its level if that was its last book.
-4. **Standing** — `stats`, the same counters the home screen shows, already
-   recalculated.
-
-Every certificate and every badge also arrives as a notification, covered in
-section 9.
-
----
-
-## 7. Sitting it again
-
-A reader may sit the exam as often as they like, whether they failed or passed.
-
-#### A retake after passing
-
-A perfect score again. `points_awarded` is `0` and nothing new is issued.
-
-```http
-POST /api/books/7/quiz
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "answers": {
-    "55": 164,
-    "56": 167,
-    "57": 170
-  }
-}
-```
-
-`200`
-
-```json
-{
-  "score": 3,
-  "total": 3,
-  "passed": true,
-  "points_awarded": 0,
-  "correct_options": {
-    "55": 164,
-    "56": 167,
-    "57": 170
-  },
-  "incorrect_questions": [],
-  "new_badges": [],
-  "new_certificates": [],
-  "stats": {
-    "points": 500,
-    "sections_passed": 0,
-    "sections_total": 19,
-    "books_completed": 1,
-    "books_total": 8,
-    "badges_earned": 1,
-    "certificates": 1
-  }
-}
-```
-
-### What a retake changes, and what it does not
-
-| | |
-|---|---|
-| The attempt is recorded | **yes** — `attempts` rises, `best_score` keeps the highest |
-| Points paid again | **no** — they are credited the first time only |
-| A second certificate | **no** |
-| The certificate's date | **updated** to the day of the new pass |
-| Its serial and verification code | **unchanged** |
-| A second notification | **no** |
-
-The certificate is re-dated rather than reissued because its serial and
-verification code are printed on copies and shared with people who are not
-readers of this app. A reissue would quietly stop every one of those verifying.
-
-A failure after a pass takes nothing back: `passed` in `meta` stays true, the
-certificate stands, and `best_score` keeps the better result.
-
----
-
-## 8. A section exam, where one still applies
-
-On a book in shape **C**, each section is examined on its own. The request and
-the response have the same shape as the book exam, so one screen serves both.
-
-#### A section exam
-
-The paper for one section.
-
-```http
-GET /api/sections/4/quiz
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-```
-
-`200`
-
-```json
-{
-  "data": [
-    {
-      "id": 10,
-      "text": "What does the section begin by settling?",
-      "position": 0,
-      "options": [
-        {
-          "id": 28,
-          "text": "Settling the purpose of reading",
-          "position": 0
-        },
-        {
-          "id": 29,
-          "text": "Memorising the table of contents",
-          "position": 1
-        },
-        {
-          "id": 30,
-          "text": "Reading the conclusion first",
-          "position": 2
-        }
-      ]
-    },
-    {
-      "id": 11,
-      "text": "Which statement matches the structured reading method?",
-      "position": 1,
-      "options": [
-        {
-          "id": 31,
-          "text": "Finishing the book in one sitting",
-          "position": 0
-        },
-        {
-          "id": 32,
-          "text": "A few pages every day",
-          "position": 1
-        },
-        {
-          "id": 33,
-          "text": "Reading only when time allows",
-          "position": 2
-        }
-      ]
-    },
-    {
-      "id": 12,
-      "text": "What is asked of the reader before moving on to the quiz?",
-      "position": 2,
-      "options": [
-        {
-  …
-```
-
-#### Passing a section exam
-
-The same body the book exam returns. The book's certificate is issued once the last of its sections is passed.
-
-```http
-POST /api/sections/4/quiz
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "answers": {
-    "10": 28,
-    "11": 32,
-    "12": 35
-  }
-}
-```
-
-`200`
-
-```json
-{
-  "score": 3,
-  "total": 3,
-  "passed": true,
-  "points_awarded": 150,
-  "correct_options": {
-    "10": 28,
-    "11": 32,
-    "12": 35
-  },
-  "incorrect_questions": [],
-  "new_badges": [
-    {
-      "id": 1,
-      "name": "The Persistent",
-      "description": "Passed your first section of the programme.",
-      "image": "http://127.0.0.1:8005/assets/badge.png",
-      "criteria_type": "sections_passed",
-      "criteria_value": 1,
-      "position": 0
-    }
-  ],
-  "new_certificates": [],
-  "stats": {
-    "points": 650,
-    "sections_passed": 1,
-    "sections_total": 19,
-    "books_completed": 1,
-    "books_total": 8,
-    "badges_earned": 2,
-    "certificates": 1
-  }
-}
-```
-
----
-
-## 9. What the reader is told
-
-A certificate and a badge each arrive in the reader's own notification feed, as
-an announcement addressed to them. This is the same inbox that carries the
-dashboard's general announcements, so it already has an unread count on the bell
-and the reader can mute either kind.
-
-#### The notification feed
-
-The newest entries are the badges and certificates from the passes above; the rest are the dashboard's general announcements.
-
-```http
-GET /api/announcements
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-```
-
-`200`
-
-```json
-{
-  "data": [
-    {
-      "id": 76,
-      "tag": "Badge",
-      "title": "New badge: The Persistent",
-      "body": "Congratulations — “The Persistent” has been added to your badges.",
-      "image": "http://127.0.0.1:8005/assets/badge.png",
-      "category": "badge",
-      "published_at": "2026-10-16T17:59:11+00:00",
-      "read": false
-    },
-    {
-      "id": 74,
-      "tag": "Badge",
-      "title": "New badge: Book Finisher",
-      "body": "Congratulations — “Book Finisher” has been added to your badges.",
-      "image": "http://127.0.0.1:8005/assets/badge.png",
-      "category": "badge",
-      "published_at": "2026-10-16T17:59:09+00:00",
-      "read": false
-    },
-    {
-      "id": 75,
-      "tag": "Certificate",
-      "title": "Your certificate for “A book read whole” has been issued",
-      "body": "Congratulations — your certificate for “A book read whole” has been issued with serial CERT-2026-O0GXPF. You will find it on the certificates page.",
-      "image": null,
-      "category": "certificate",
-      "published_at": "2026-10-16T17:59:09+00:00",
-      "read": false
-    },
-    {
-      "id": 1,
-      "tag": "New programme",
-      "title": "Structured Reading programme opens — first term",
-      "body": "Registration is open until the end of the week.",
-      "image": "http://127.0.0.1:8005/assets/banner.svg",
-      "category": "program",
-      "published_at": "2026-10-15T09:06:12+00:00",
-      "read": false
-    },
-    {
-      "id": 2,
-      "tag": "Exam",
-      "title": "Second level exam date",
-      "body": "Sunday 16 August 2026, 7 p.m.",
-      "image": "http://127.0.0.1:8005/assets/banner.svg",
-      "category": "exam",
-      "published_at": "2026-10-14T10:06:12+00:00",
-      "read": false
-    },
-    {
-  …
-```
-
-Categories: `certificate` and `badge` are the automatic ones. `program`,
-`exam`, `results`, `honor` and `general` are posted from the dashboard. A reader
-mutes any of them through `PUT /api/notification-preferences`.
-
-Only a **new** certificate announces itself. Re-dating one after a retake is not
-news, so the unread count does not move.
-
----
-
-## 10. The certificates themselves
-
-#### Certificates held
-
-What the reader holds. A certificate carries either a `book` or a `level`.
-
-```http
-GET /api/certificates
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-```
-
-`200`
-
-```json
-{
-  "data": [
-    {
-      "id": 30,
-      "serial": "CERT-2026-O0GXPF",
-      "title": "A book read whole",
-      "issued_at": "2026-10-16",
-      "level": null,
-      "book": {
-        "id": 7,
-        "title": "A book read whole",
-        "author": "The author",
-        "description": "Read as one document.",
-        "cover": null,
-        "pdf": "http://127.0.0.1:8005/storage/uploads/sample-section.pdf",
-        "has_own_quiz": true,
-        "quiz_button": {
-          "visible": true,
-          "label": "Exam on the whole book"
-        },
-        "exam": {
-          "scope": "book",
-          "button": {
-            "visible": true,
-            "label": "Exam on the whole book"
-          },
-          "questions_total": 3
-        },
-        "pages": 120,
-        "points": 500,
-        "position": 10
-      },
-      "verification_url": "http://127.0.0.1:8005/api/certificates/verify/cd3f70f7-e93a-42cd-870f-47d906851c3b"
-    }
-  ]
-}
-```
-
-#### Every certificate, held or not
-
-Everything issuable, with how far along the reader is. `scope` says whether a row is for a book or a level; `percent` is the progress towards it. A screen can show what is still ahead rather than only what is done.
-
-```http
-GET /api/certificates/available
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-```
-
-`200`
-
-```json
-{
-  "data": [
-    {
-      "scope": "book",
-      "book": {
-        "id": 1,
-        "title": "Introduction to Structured Reading"
-      },
-      "level": null,
-      "title": "Introduction to Structured Reading",
-      "earned": false,
-      "serial": null,
-      "issued_at": null,
-      "verification_url": null,
-      "sections_passed": 0,
-      "sections_total": 3,
-      "percent": 0
-    },
-    {
-      "scope": "book",
-      "book": {
-        "id": 2,
-        "title": "Foundations of Systematic Thinking"
-      },
-      "level": null,
-      "title": "Foundations of Systematic Thinking",
-      "earned": false,
-      "serial": null,
-      "issued_at": null,
-      "verification_url": null,
-      "sections_passed": 1,
-      "sections_total": 3,
-      "percent": 33
-    },
-    {
-      "scope": "book",
-      "book": {
-        "id": 3,
-        "title": "The Great Books: A Reader's Guide"
-      },
-      "level": null,
-      "title": "The Great Books: A Reader's Guide",
-      "earned": false,
-      "serial": null,
-      "issued_at": null,
-      "verification_url": null,
-      "sections_passed": 0,
-      "sections_total": 3,
-      "percent": 0
-    },
-    {
-      "scope": "book",
-      "book": {
-        "id": 4,
-        "title": "Cognitive Awareness"
-      },
-      "level": null,
-      "title": "Cognitive Awareness",
-      "earned": false,
-      "serial": null,
-      "issued_at": null,
-      "verification_url": null,
-      "sections_passed": 0,
-      "sections_total": 3,
-      "percent": 0
-    },
-    {
-      "scope": "book",
-      "book": {
-        "id": 5,
-        "title": "Summarising Skills"
-      },
-      "level": null,
-      "title": "Summarising Skills",
-      "earned": false,
-      "serial": null,
-      "issued_at": null,
-  …
-```
-
----
-
-## 11. Errors
-
-#### A section quiz on a book examined as a whole
-
-The exam moved to the book, so the section no longer has one. 404 rather than an empty paper, because "here is nothing" invites a client to render an empty exam.
-
-```http
-GET /api/sections/1/quiz
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-```
-
-`404`
-
-```json
-{
-  "message": "This book is examined as a whole, so its sections have no exam of their own.",
-  "exception": "Symfony\\Component\\HttpKernel\\Exception\\NotFoundHttpException",
+  "message": "اقرأ الكتاب كاملاً قبل أداء اختباره.",
+  "exception": "Symfony\\Component\\HttpKernel\\Exception\\HttpException",
   "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Application.php",
-  "line": 1437,
-  "trace": [
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\helpers.php",
-      "line": 67,
-      "function": "abort",
-      "class": "Illuminate\\Foundation\\Application",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\helpers.php",
-      "line": 85,
-      "function": "abort"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\app\\Http\\Controllers\\Api\\QuizController.php",
-      "line": 37,
-      "function": "abort_if"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\ControllerDispatcher.php",
-      "line": 46,
-      "function": "show",
-      "class": "App\\Http\\Controllers\\Api\\QuizController",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Route.php",
-      "line": 265,
-      "function": "dispatch",
-      "class": "Illuminate\\Routing\\ControllerDispatcher",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Route.php",
-      "line": 211,
-      "function": "runController",
-      "class": "Illuminate\\Routing\\Route",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
-      "line": 822,
-      "function": "run",
-      "class": "Illuminate\\Routing\\Route",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 180,
-      "function": "Illuminate\\Routing\\{closure}",
-      "class": "Illuminate\\Routing\\Router",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Middleware\\SubstituteBindings.php",
-      "line": 50,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Routing\\Middleware\\SubstituteBindings",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Auth\\Middleware\\Authenticate.php",
-      "line": 63,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Auth\\Middleware\\Authenticate",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\app\\Http\\Middleware\\SetLocale.php",
-      "line": 51,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "App\\Http\\Middleware\\SetLocale",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\app\\Http\\Middleware\\ResolveOptionalUser.php",
-      "line": 35,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "App\\Http\\Middleware\\ResolveOptionalUser",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 137,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
-      "line": 821,
-      "function": "then",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
-      "line": 800,
-      "function": "runRouteWithinStack",
-      "class": "Illuminate\\Routing\\Router",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
-      "line": 764,
-      "function": "runRoute",
-      "class": "Illuminate\\Routing\\Router",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
-      "line": 753,
-      "function": "dispatchToRoute",
-      "class": "Illuminate\\Routing\\Router",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Kernel.php",
-      "line": 200,
-      "function": "dispatch",
-      "class": "Illuminate\\Routing\\Router",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 180,
-      "function": "Illuminate\\Foundation\\Http\\{closure}",
-      "class": "Illuminate\\Foundation\\Http\\Kernel",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest.php",
-      "line": 21,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull.php",
-      "line": 31,
-      "function": "handle",
-      "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest.php",
-      "line": 21,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\TrimStrings.php",
-      "line": 51,
-      "function": "handle",
-      "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Foundation\\Http\\Middleware\\TrimStrings",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Http\\Middleware\\ValidatePostSize.php",
-      "line": 27,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Http\\Middleware\\ValidatePostSize",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance.php",
-      "line": 109,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Http\\Middleware\\HandleCors.php",
-      "line": 74,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Http\\Middleware\\HandleCors",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Http\\Middleware\\TrustProxies.php",
-      "line": 58,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Http\\Middleware\\TrustProxies",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\InvokeDeferredCallbacks.php",
-      "line": 22,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Foundation\\Http\\Middleware\\InvokeDeferredCallbacks",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Http\\Middleware\\ValidatePathEncoding.php",
-      "line": 26,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Http\\Middleware\\ValidatePathEncoding",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 137,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Kernel.php",
-      "line": 175,
-      "function": "then",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Kernel.php",
-      "line": 144,
-      "function": "sendRequestThroughRouter",
-      "class": "Illuminate\\Foundation\\Http\\Kernel",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Application.php",
-      "line": 1220,
-      "function": "handle",
-      "class": "Illuminate\\Foundation\\Http\\Kernel",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\public\\index.php",
-      "line": 20,
-      "function": "handleRequest",
-      "class": "Illuminate\\Foundation\\Application",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\resources\\server.php",
-      "line": 23,
-      "function": "require_once"
-    }
-  ]
-}
-```
-
-#### A book exam on a book examined by section
-
-The mirror image: this book is examined section by section, so it has no exam of its own.
-
-```http
-GET /api/books/2/quiz
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-```
-
-`404`
-
-```json
-{
-  "message": "This book is examined section by section, so it has no exam of its own.",
-  "exception": "Symfony\\Component\\HttpKernel\\Exception\\NotFoundHttpException",
-  "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Application.php",
-  "line": 1437,
+  "line": 1440,
   "trace": [
     {
       "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\helpers.php",
@@ -1602,334 +190,246 @@ Authorization: Bearer <token>
     },
     {
       "file": "D:\\xa73\\htdocs\\Himam-Backend\\app\\Http\\Controllers\\Api\\BookQuizController.php",
-      "line": 40,
+      "line": 138,
       "function": "abort_unless"
     },
     {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\ControllerDispatcher.php",
-      "line": 46,
-      "function": "show",
-      "class": "App\\Http\\Controllers\\Api\\BookQuizController",
-      "type": "->"
+  …
+```
+
+### The paper
+
+Questions, without the answers. The key is held server-side and never sent
+before grading.
+
+```json
+{
+  "id": 1,
+  "text": "ما الغاية الأولى التي يبدأ بها القسم؟",
+  "position": 1,
+  "options": [
+    {
+      "id": 1,
+      "text": "تحديد الغاية من القراءة",
+      "position": 0
     },
     {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Route.php",
-      "line": 265,
-      "function": "dispatch",
-      "class": "Illuminate\\Routing\\ControllerDispatcher",
-      "type": "->"
+      "id": 2,
+      "text": "حفظ فهرس الكتاب",
+      "position": 1
     },
     {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Route.php",
-      "line": 211,
-      "function": "runController",
-      "class": "Illuminate\\Routing\\Route",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
-      "line": 822,
-      "function": "run",
-      "class": "Illuminate\\Routing\\Route",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 180,
-      "function": "Illuminate\\Routing\\{closure}",
-      "class": "Illuminate\\Routing\\Router",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Middleware\\SubstituteBindings.php",
-      "line": 50,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Routing\\Middleware\\SubstituteBindings",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Auth\\Middleware\\Authenticate.php",
-      "line": 63,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Auth\\Middleware\\Authenticate",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\app\\Http\\Middleware\\SetLocale.php",
-      "line": 51,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "App\\Http\\Middleware\\SetLocale",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\app\\Http\\Middleware\\ResolveOptionalUser.php",
-      "line": 35,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "App\\Http\\Middleware\\ResolveOptionalUser",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 137,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
-      "line": 821,
-      "function": "then",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
-      "line": 800,
-      "function": "runRouteWithinStack",
-      "class": "Illuminate\\Routing\\Router",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
-      "line": 764,
-      "function": "runRoute",
-      "class": "Illuminate\\Routing\\Router",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Routing\\Router.php",
-      "line": 753,
-      "function": "dispatchToRoute",
-      "class": "Illuminate\\Routing\\Router",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Kernel.php",
-      "line": 200,
-      "function": "dispatch",
-      "class": "Illuminate\\Routing\\Router",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 180,
-      "function": "Illuminate\\Foundation\\Http\\{closure}",
-      "class": "Illuminate\\Foundation\\Http\\Kernel",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest.php",
-      "line": 21,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull.php",
-      "line": 31,
-      "function": "handle",
-      "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest.php",
-      "line": 21,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\TrimStrings.php",
-      "line": 51,
-      "function": "handle",
-      "class": "Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Foundation\\Http\\Middleware\\TrimStrings",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Http\\Middleware\\ValidatePostSize.php",
-      "line": 27,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Http\\Middleware\\ValidatePostSize",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance.php",
-      "line": 109,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Http\\Middleware\\HandleCors.php",
-      "line": 74,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Http\\Middleware\\HandleCors",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Http\\Middleware\\TrustProxies.php",
-      "line": 58,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Http\\Middleware\\TrustProxies",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Middleware\\InvokeDeferredCallbacks.php",
-      "line": 22,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Foundation\\Http\\Middleware\\InvokeDeferredCallbacks",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Http\\Middleware\\ValidatePathEncoding.php",
-      "line": 26,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 219,
-      "function": "handle",
-      "class": "Illuminate\\Http\\Middleware\\ValidatePathEncoding",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Pipeline\\Pipeline.php",
-      "line": 137,
-      "function": "Illuminate\\Pipeline\\{closure}",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Kernel.php",
-      "line": 175,
-      "function": "then",
-      "class": "Illuminate\\Pipeline\\Pipeline",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Http\\Kernel.php",
-      "line": 144,
-      "function": "sendRequestThroughRouter",
-      "class": "Illuminate\\Foundation\\Http\\Kernel",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\Application.php",
-      "line": 1220,
-      "function": "handle",
-      "class": "Illuminate\\Foundation\\Http\\Kernel",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\public\\index.php",
-      "line": 20,
-      "function": "handleRequest",
-      "class": "Illuminate\\Foundation\\Application",
-      "type": "->"
-    },
-    {
-      "file": "D:\\xa73\\htdocs\\Himam-Backend\\vendor\\laravel\\framework\\src\\Illuminate\\Foundation\\resources\\server.php",
-      "line": 23,
-      "function": "require_once"
+      "id": 3,
+      "text": "قراءة الخاتمة أولاً",
+      "position": 2
     }
   ]
 }
 ```
 
-#### A malformed submission
+`meta` carries what the screen needs to present it:
 
-`answers` must be present, even when empty. The message is translated by `Accept-Language`.
-
-```http
-POST /api/books/7/quiz
-Accept: application/json
-Accept-Language: en
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{}
+```json
+{
+  "book": {
+    "id": 1,
+    "title": "مقدمة في القراءة المنظمة"
+  },
+  "questions_total": 9,
+  "pass_ratio": 0.6,
+  "quiz_button": {
+    "visible": false,
+    "label": "ابدأ الاختبار",
+    "reason": "not_signed_in"
+  },
+  "taken": false,
+  "attempts": 0,
+  "passed": false,
+  "best_score": null,
+  "last_attempt": null
+}
 ```
 
-`422`
+| Field | Use |
+|---|---|
+| `taken`, `attempts` | label the button "retake" rather than "start" |
+| `passed` | stays true after a later failure — a resit cannot undo a pass |
+| `best_score` | show it before they begin |
+| `last_attempt` | score, total, result and time of the most recent try |
+| `pass_ratio` | the fraction needed, e.g. `0.6` |
+
+### Submitting
+
+```json
+{ "answers": { "<question id>": <option id>, … } }
+```
+
+A question left out counts as wrong.
+
+---
+
+## 5. Results
+
+**A failure returns no answers.** A resit is free and unlimited, so handing
+back the key would make the first attempt a way of being told them:
+
+```json
+{
+  "score": 5,
+  "total": 9,
+  "passed": false,
+  "points_awarded": 0,
+  "correct_options": null,
+  "incorrect_questions": [
+    2,
+    3,
+    6,
+    8
+  ],
+  "new_badges": [
+    {
+      "id": 1,
+      "name": "المثابر",
+      "description": "أنهيت أول قسم من أقسام البرنامج.",
+      "image": "http://localhost:8000/assets/badge.png",
+      "criteria_type": "sections_read",
+      "criteria_value": 1,
+      "position": 0
+    }
+  ],
+  "new_certificates": []
+}
+```
+
+**A pass returns everything it produced** — the key, the points, the badges,
+the certificates, and the reader's recalculated standing:
+
+```json
+{
+  "score": 9,
+  "total": 9,
+  "passed": true,
+  "points_awarded": 400,
+  "correct_options": {
+    "1": 1,
+    "2": 5,
+    "3": 8,
+    "4": 10,
+    "5": 13,
+    "6": 17,
+    "7": 19,
+    "8": 23,
+    "9": 25
+  },
+  "incorrect_questions": [],
+  "new_certificates": [
+    {
+      "id": 28,
+      "serial": "CERT-2026-VJBDJC",
+      "title": "مقدمة في القراءة المنظمة",
+      "issued_at": "2026-10-16",
+      "verification_url": "http://localhost/api/certificates/verify/101af2ad-41db-4fd9-8b7d-fb022127b208"
+    }
+  ]
+}
+```
+
+- **Failed** → `correct_options` is `null`; `incorrect_questions` lists what
+  to go back and read.
+- **Passed** → `correct_options` maps question id to the correct option id.
+
+Mark the reader's own wrong answers either way. After a failure, mark
+**nothing** as correct — reading a missing `correct_options` as "everything is
+wrong" would redden a paper they got most of right.
+
+### A retake is free and pays nothing
+
+```json
+{
+  "score": 9,
+  "total": 9,
+  "passed": true,
+  "points_awarded": 0,
+  "incorrect_questions": [],
+  "new_badges": [],
+  "new_certificates": []
+}
+```
+
+The certificate is **re-dated, not reissued**: its serial and verification
+code stay the same, because they are printed on copies that must keep
+verifying.
+
+---
+
+## 6. Certificates
+
+A certificate per book, and one per level when all its books are done.
+`GET /api/certificates/available` lists everything issuable:
+
+```json
+{
+  "scope": "book",
+  "book": {
+    "id": 1,
+    "title": "مقدمة في القراءة المنظمة"
+  },
+  "level": null,
+  "title": "مقدمة في القراءة المنظمة",
+  "earned": true,
+  "serial": "CERT-2026-VJBDJC",
+  "issued_at": "2026-10-16",
+  "verification_url": "http://localhost/api/certificates/verify/101af2ad-41db-4fd9-8b7d-fb022127b208",
+  "sections_read": 3,
+  "sections_total": 3,
+  "percent": 100
+}
+```
+
+`scope` is `book` or `level`. A reader finishing the last book of a level
+earns **both at once**, so a screen that assumes one per event will drop the
+other.
+
+---
+
+## 7. Notifications
+
+`certificate` and `badge` are issued automatically and arrive in the same feed
+as the dashboard's announcements, counting towards `meta.unread`:
+
+```json
+[
+  {
+    "category": "badge",
+    "title": "حصلت على وسام المثابر"
+  },
+  {
+    "category": "badge",
+    "title": "حصلت على وسام متمم الكتاب"
+  },
+  {
+    "category": "certificate",
+    "title": "صدرت شهادتك في «مقدمة في القراءة المنظمة»"
+  }
+]
+```
+
+The full set: `certificate`, `badge`, `program`, `exam`, `results`, `honor`,
+`general`. All mutable through `PUT /api/notification-preferences`.
+
+---
+
+## 8. Errors
+
+| Status | When | What to do |
+|---|---|---|
+| `401` | no token, or revoked | send them back to sign in |
+| `403` | the book is not read yet, or an earlier book in a sequential programme is unfinished | show the message; it is written for the reader |
+| `404` | unpublished, withdrawn with its level, or in a selective programme they are not assigned to | treat as absent, not as an error |
+| `422` | the body failed validation | show `errors` against the fields |
+
+A `404` on a book the app has cached is normal — it may have been withdrawn
+since. Treat it as "no longer available" and return to the catalogue.
 
 ```json
 {
@@ -1942,39 +442,33 @@ Content-Type: application/json
 }
 ```
 
-### Other responses worth handling
+---
 
-| Status | When |
-|---|---|
-| `401` | the token is missing, expired or has been revoked |
-| `403` | the book is locked — an earlier book in a sequential programme is unfinished, or the reader was not assigned to a selective one |
-| `404` | the book or section is unpublished, or has no exam of the kind asked for |
-| `422` | `answers` missing, or an option id that is not an integer |
+## 9. Other things worth knowing
 
-A `403` carries the reason, so the screen can say which book is in the way
-rather than only that something is.
+**Media fields are absolute URLs.** `cover`, `image`, `avatar` and `pdf` come
+back ready to use. Do not prefix them. `null` means nothing was uploaded.
+
+**A document is per language.** `pdf` on a book or section is resolved to the
+requested language before it is sent — one string, not a map.
+
+**Language** comes from `?lang=ar`, `X-Locale`, `Accept-Language`, the reader's
+saved language, then the dashboard default — first match wins. A field with no
+translation falls back rather than coming back empty.
+
+**Deactivating a level withdraws its books**: they leave the catalogue, their
+sections and exam answer `404`, and they leave the totals.
 
 ---
 
-## 12. The whole thing in order
+## The whole thing in order
 
-**Shapes A and B — the exam belongs to the book.**
-
-1. `GET /api/books/{id}` — the layout, the document, and whether to show a button
-2. `POST /api/books/{id}/read`, or `POST /api/sections/{id}/read` per section
-3. `GET /api/books/{id}/quiz` — the paper, plus any earlier attempts
+1. `GET /api/books/{id}` — the book, and whether its exam is open
+2. `POST /api/sections/{id}/read` for each section, or
+   `POST /api/books/{id}/read` for a book that is one document
+3. `GET /api/books/{id}/quiz` — the paper, once the reading is done
 4. `POST /api/books/{id}/quiz` — the answers; back come the score, the points,
    any badges and certificates, and the new standing
-5. On a failure: back to 3 as often as the reader likes
-6. On a pass: `completed` turns true, and the certificate and badges are already
-   in the feed
-
-**Shape C — the exam belongs to each section.**
-
-1. `GET /api/sections/{id}` — the section; `meta.book.has_own_quiz` confirms
-   which exam applies
-2. `POST /api/sections/{id}/read`
-3. `GET /api/sections/{id}/quiz`
-4. `POST /api/sections/{id}/quiz`
-
-and the book's certificate is issued once the last of its sections is passed.
+5. On a failure: back to 3, as often as the reader likes
+6. On a pass: `completed` turns true, and the certificate and badges are
+   already in the feed
