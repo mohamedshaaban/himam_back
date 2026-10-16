@@ -229,7 +229,9 @@ class ProgressService
      */
     public function syncBadges(User $user): \Illuminate\Support\Collection
     {
-        $stats = $this->stats($user);
+        // The screen's levels are the active ones, which is now precisely the
+        // set stats() counts, so it is handed over rather than fetched again.
+        $stats = $this->stats($user, $levels->flatMap->books);
         $alreadyHeld = $user->badges()->pluck('badges.id')->all();
 
         $newlyEarned = Badge::query()
@@ -488,10 +490,22 @@ class ProgressService
         $passedSectionIds = $user->passedSectionIds();
         $passedBookIds = $user->passedBookIds();
 
+        // Counted over the books a reader is actually shown: published, and on
+        // a level that is still active.
+        //
+        // These totals used to count every published book, while the progress
+        // screen lists only the active levels. Deactivating one left a reader
+        // looking at six books beside a counter reading "of 8", with the other
+        // two nowhere on the page. Both sides of that ratio now describe the
+        // same set, so the figure says something about what is in front of
+        // them.
         $books ??= Book::published()
+            ->whereHas('level', fn ($q) => $q->where('is_active', true))
             ->with('sections:id,book_id')
             ->withCount('questions')
             ->get();
+
+        $sectionIds = $books->flatMap->sections->pluck('id');
 
         $booksCompleted = $books
             ->filter(fn (Book $book) => $book->completedBy($passedSectionIds, $passedBookIds))
@@ -499,15 +513,13 @@ class ProgressService
 
         return [
             'points' => (int) $user->points,
-            'sections_passed' => count($passedSectionIds),
 
-            // Deliberately not counted off $books: a caller may hand in a
-            // narrower set, and these two have always meant every published
-            // section and book. Deriving them from whatever was passed would
-            // change what the screen reports under cover of a speed-up.
-            'sections_total' => BookSection::whereHas('book', fn ($q) => $q->published())->count(),
+            // Passes on a withdrawn level leave the numerator with the
+            // denominator; a certificate already issued for one still stands.
+            'sections_passed' => $sectionIds->intersect($passedSectionIds)->count(),
+            'sections_total' => $sectionIds->count(),
             'books_completed' => $booksCompleted,
-            'books_total' => Book::published()->count(),
+            'books_total' => $books->count(),
             'badges_earned' => $user->badges()->count(),
             'certificates' => $user->certificates()->count(),
         ];
@@ -601,7 +613,9 @@ class ProgressService
             ];
         })->values();
 
-        $stats = $this->stats($user);
+        // The screen's levels are the active ones, which is now precisely the
+        // set stats() counts, so it is handed over rather than fetched again.
+        $stats = $this->stats($user, $levels->flatMap->books);
 
         return [
             'stats' => $stats,
