@@ -85,10 +85,20 @@ say about the payload as a whole:
 }
 ```
 
-Three exceptions, all deliberate: `POST /auth/register` and `POST /auth/login`
-return `token` and `user` at the top level, and both quiz submissions return
-their result flat — one quiz screen submits to either endpoint, and an envelope
-on one but not the other would make it read the result two different ways.
+Not every endpoint does. The ones that answer with their fields at the top
+level instead:
+
+| Endpoint | What comes back |
+|---|---|
+| `POST /auth/register`, `POST /auth/login` | `token` and `user` |
+| `POST /books/{book}/quiz`, `POST /sections/{section}/quiz` | the result, flat |
+| `GET /dashboard`, `GET /progress` | the screen's sections |
+| `GET /certificates/verify/{code}` | the verification result |
+
+The quiz pair is deliberate: one screen submits to either endpoint, and an
+envelope on one but not the other would make it read the result two different
+ways. The rest are endpoints that return a composite rather than a resource,
+where a `data` key would wrap a thing that is not one.
 
 ### Media
 
