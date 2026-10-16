@@ -81,6 +81,10 @@ class ProgressService
             }
             $progress->save();
 
+            // Badges and certificates are decided from this reader's passes a
+            // few lines below, and those lists are remembered per request.
+            $user->forgetProgress();
+
             if ($pointsAwarded > 0) {
                 $user->increment('points', $pointsAwarded);
                 $user->refresh();
@@ -163,6 +167,10 @@ class ProgressService
 
             $progress->save();
 
+            // Badges and certificates are decided from this reader's passes a
+            // few lines below, and those lists are remembered per request.
+            $user->forgetProgress();
+
             if ($pointsAwarded > 0) {
                 $user->increment('points', $pointsAwarded);
                 $user->refresh();
@@ -191,6 +199,8 @@ class ProgressService
         $progress->read_at ??= now();
         $progress->save();
 
+        $user->forgetProgress();
+
         return $progress;
     }
 
@@ -206,6 +216,8 @@ class ProgressService
 
         $progress->read_at ??= now();
         $progress->save();
+
+        $user->forgetProgress();
 
         return $progress;
     }
@@ -466,21 +478,33 @@ class ProgressService
     /**
      * Aggregate counters used by the home screen and by badge evaluation.
      */
-    public function stats(User $user): array
+    /**
+     * @param  \Illuminate\Support\Collection<int, Book>|null  $books  the published
+     *         catalogue, with sections and question counts, when the caller has
+     *         already loaded it — the progress screen has.
+     */
+    public function stats(User $user, ?\Illuminate\Support\Collection $books = null): array
     {
         $passedSectionIds = $user->passedSectionIds();
         $passedBookIds = $user->passedBookIds();
 
-        $booksCompleted = Book::published()
+        $books ??= Book::published()
             ->with('sections:id,book_id')
             ->withCount('questions')
-            ->get()
+            ->get();
+
+        $booksCompleted = $books
             ->filter(fn (Book $book) => $book->completedBy($passedSectionIds, $passedBookIds))
             ->count();
 
         return [
             'points' => (int) $user->points,
             'sections_passed' => count($passedSectionIds),
+
+            // Deliberately not counted off $books: a caller may hand in a
+            // narrower set, and these two have always meant every published
+            // section and book. Deriving them from whatever was passed would
+            // change what the screen reports under cover of a speed-up.
             'sections_total' => BookSection::whereHas('book', fn ($q) => $q->published())->count(),
             'books_completed' => $booksCompleted,
             'books_total' => Book::published()->count(),
@@ -498,8 +522,13 @@ class ProgressService
      */
     public function detail(User $user): array
     {
-        $progressRows = $user->progress()->get()->keyBy('book_section_id');
-        $attempts = $user->quizAttempts()->get()->groupBy('book_section_id');
+        // Every figure on this screen comes out of three tables, so each is
+        // read once. It used to read reading_progress twice and quiz_attempts
+        // three times, which on a database in another region is five round
+        // trips for rows already in memory.
+        $progressRows = $user->progressRows()->keyBy('book_section_id');
+        $allAttempts = $user->quizAttempts()->get();
+        $attempts = $allAttempts->groupBy('book_section_id');
         $certificates = $user->certificates()->whereNotNull('level_id')->get()->keyBy('level_id');
 
         $passedSectionIds = $user->passedSectionIds();
@@ -578,8 +607,8 @@ class ProgressService
             'stats' => $stats,
             'levels' => $levelPayload,
             'next_badges' => $this->nextBadges($user, 3, $stats),
-            'recent_attempts' => $this->recentAttempts($user),
-            'monthly_points' => $this->monthlyPoints($user),
+            'recent_attempts' => $this->recentAttempts($user, 10, $allAttempts),
+            'monthly_points' => $this->monthlyPoints($user, $allAttempts),
         ];
     }
 
@@ -626,13 +655,13 @@ class ProgressService
             ->values();
     }
 
-    private function recentAttempts(User $user, int $limit = 10): \Illuminate\Support\Collection
+    private function recentAttempts(User $user, int $limit = 10, ?\Illuminate\Support\Collection $attempts = null): \Illuminate\Support\Collection
     {
-        return $user->quizAttempts()
-            ->with('section.book')
-            ->latest()
-            ->take($limit)
-            ->get()
+        $recent = $attempts
+            ? $attempts->sortByDesc('created_at')->take($limit)->values()->load('section.book')
+            : $user->quizAttempts()->with('section.book')->latest()->take($limit)->get();
+
+        return $recent
             ->map(fn (QuizAttempt $attempt) => [
                 'id' => $attempt->id,
                 'score' => $attempt->score,
@@ -654,11 +683,13 @@ class ProgressService
     /**
      * Points credited per month over the last year, for the trend bars.
      */
-    private function monthlyPoints(User $user): \Illuminate\Support\Collection
+    private function monthlyPoints(User $user, ?\Illuminate\Support\Collection $attempts = null): \Illuminate\Support\Collection
     {
-        $rows = $user->quizAttempts()
-            ->where('created_at', '>=', now()->subMonths(11)->startOfMonth())
-            ->get(['points_awarded', 'created_at'])
+        $since = now()->subMonths(11)->startOfMonth();
+
+        $rows = ($attempts
+                ? $attempts->filter(fn (QuizAttempt $attempt) => $attempt->created_at >= $since)
+                : $user->quizAttempts()->where('created_at', '>=', $since)->get(['points_awarded', 'created_at']))
             ->groupBy(fn (QuizAttempt $attempt) => $attempt->created_at->format('Y-m'))
             ->map(fn ($group) => (int) $group->sum('points_awarded'));
 

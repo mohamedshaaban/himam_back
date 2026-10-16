@@ -101,6 +101,9 @@ seed_in_background() {
   if [ "${RUN_SEEDERS:-false}" = "true" ]; then
     php artisan db:seed --force --no-interaction
   fi
+
+  # Anything the seeder cached belongs to Apache, not to root.
+  chown -R www-data:www-data storage/framework || true
 }
 
 if [ "${RUN_SEEDERS_IN_BACKGROUND:-true}" = "true" ]; then
@@ -110,5 +113,13 @@ else
   # empty catalogue.
   seed_in_background
 fi
+
+# This script runs as root and Apache then serves as www-data. That was
+# harmless while the cache lived in the database — Apache only ever read what
+# root had written. With a file cache Apache has to write there too, and a
+# root-owned cache directory would turn every cache miss into a permission
+# error. The background seeder can create more of them after this point, so it
+# hands ownership back as well.
+chown -R www-data:www-data storage/framework || true
 
 exec apache2-foreground

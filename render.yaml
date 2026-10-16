@@ -52,10 +52,21 @@ services:
       # Laravel's own tables, so no Redis is needed on a free tier.
       - key: SESSION_DRIVER
         value: database
-      - key: CACHE_STORE
-        value: database
       - key: QUEUE_CONNECTION
         value: database
+
+      # The cache is the one thing that must NOT live in the database here.
+      # The database is in another region, so every cache read was a network
+      # round trip — the cache was costing more than the queries it exists to
+      # avoid. On local disk a read is microseconds.
+      #
+      # A cache is disposable by definition: losing it on each deploy is
+      # correct, and it refills on the first request that needs it. The one
+      # thing to know is that it is per container, so an administrator editing
+      # a language clears it only where their request landed. That is fine on
+      # a single instance; move to Redis before running more than one.
+      - key: CACHE_STORE
+        value: file
 
       # Render generates this once and keeps it stable across deploys.
       - key: APP_KEY

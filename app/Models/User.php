@@ -111,11 +111,36 @@ class User extends Authenticatable
      * Kept beside passedSectionIds() because "finished this book" now has two
      * shapes, and every rule that counts progress has to accept both.
      */
+    /**
+     * This reader's progress rows, read once per request.
+     *
+     * The three lists below are three readings of the same table, and a single
+     * book screen asked for them five times between the programme lock, the
+     * progress block and the exam summary. Against a database in another
+     * region that is five round trips for rows one query returns.
+     *
+     * Anything that writes progress calls forgetProgress() so the next read
+     * sees it — grading does exactly that before it awards badges.
+     */
+    private ?\Illuminate\Support\Collection $progressRows = null;
+
+    public function progressRows(): \Illuminate\Support\Collection
+    {
+        return $this->progressRows ??= $this->progress()
+            ->get(['book_section_id', 'book_id', 'read_at', 'passed_at']);
+    }
+
+    public function forgetProgress(): static
+    {
+        $this->progressRows = null;
+
+        return $this;
+    }
+
     public function passedBookIds(): array
     {
-        return $this->progress()
-            ->whereNotNull('book_id')
-            ->whereNotNull('passed_at')
+        return $this->progressRows()
+            ->filter(fn ($row) => $row->book_id !== null && $row->passed_at !== null)
             ->pluck('book_id')
             ->all();
     }
@@ -129,9 +154,8 @@ class User extends Authenticatable
      */
     public function readSectionIds(): array
     {
-        return $this->progress()
-            ->whereNotNull('book_section_id')
-            ->whereNotNull('read_at')
+        return $this->progressRows()
+            ->filter(fn ($row) => $row->book_section_id !== null && $row->read_at !== null)
             ->pluck('book_section_id')
             ->all();
     }
@@ -142,9 +166,8 @@ class User extends Authenticatable
         // id, and without this filter its null came back as a "passed section":
         // the counter on the home screen ran ahead, and a badge for passing
         // one's first section was awarded for passing a whole book.
-        return $this->progress()
-            ->whereNotNull('book_section_id')
-            ->whereNotNull('passed_at')
+        return $this->progressRows()
+            ->filter(fn ($row) => $row->book_section_id !== null && $row->passed_at !== null)
             ->pluck('book_section_id')
             ->all();
     }

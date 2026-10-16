@@ -156,7 +156,14 @@ class Book extends Model
             return [
                 'scope' => 'book',
                 'button' => $this->quizButton(),
-                'questions_total' => $this->questions()->count(),
+
+                // hasOwnQuiz() just established this from a count the query
+                // already asked for; counting again would be a round trip for
+                // a number in hand.
+                'questions_total' => $this->questions_count
+                    ?? ($this->relationLoaded('questions')
+                        ? $this->questions->count()
+                        : $this->questions()->count()),
             ];
         }
 

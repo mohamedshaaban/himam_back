@@ -23,11 +23,26 @@ class LocaleRegistry
     private const CACHE_KEY = 'himam.locales';
 
     /**
+     * Remembered for the length of one request, on top of the cache.
+     *
+     * The cache store is itself the database on this deployment, so a cache
+     * read is a round trip to another region — and the SetLocale middleware,
+     * the resources and the translatable fields all ask repeatedly within a
+     * single request. Asking once is the difference between one round trip and
+     * four for a list of four languages.
+     */
+    private ?array $memo = null;
+
+    private ?string $memoDefault = null;
+
+    private ?bool $memoTableExists = null;
+
+    /**
      * Active locales as code => ['name', 'english_name', 'dir'].
      */
     public function all(): array
     {
-        return Cache::rememberForever(self::CACHE_KEY, function () {
+        return $this->memo ??= Cache::rememberForever(self::CACHE_KEY, function () {
             // Falls back to the config list when the table isn't there yet —
             // during the very first migrate, or if someone runs artisan against
             // an empty database. Without this the app couldn't boot far enough
@@ -77,6 +92,10 @@ class LocaleRegistry
             return $fallback;
         }
 
+        if ($this->memoDefault !== null) {
+            return $this->memoDefault;
+        }
+
         try {
             $default = Cache::rememberForever(self::CACHE_KEY.'.default', function () {
                 return Locale::active()->where('is_default', true)->value('code');
@@ -85,22 +104,33 @@ class LocaleRegistry
             return $fallback;
         }
 
-        return $default ?: ($this->supports($fallback) ? $fallback : ($this->codes()[0] ?? $fallback));
+        return $this->memoDefault = $default
+            ?: ($this->supports($fallback) ? $fallback : ($this->codes()[0] ?? $fallback));
     }
 
     public function forget(): void
     {
+        $this->memo = null;
+        $this->memoDefault = null;
+
         Cache::forget(self::CACHE_KEY);
         Cache::forget(self::CACHE_KEY.'.default');
     }
 
     private function tableExists(): bool
     {
+        if ($this->memoTableExists !== null) {
+            return $this->memoTableExists;
+        }
+
         try {
-            return Schema::hasTable('locales');
+            // Schema::hasTable() queries the catalogue every call, and this was
+            // being asked twice a request to answer a question whose answer
+            // cannot change inside one.
+            return $this->memoTableExists = Schema::hasTable('locales');
         } catch (Throwable) {
             // No database yet — during an initial container boot, for instance.
-            return false;
+            return $this->memoTableExists = false;
         }
     }
 }

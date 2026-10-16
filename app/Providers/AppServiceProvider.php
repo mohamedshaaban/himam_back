@@ -12,7 +12,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Both registries remember what they have looked up for the length of
+        // a request. Resolved fresh each time, that memo would be thrown away
+        // before it was ever read, and on this deployment the cache behind
+        // them is the database — in another region.
+        $this->app->singleton(\App\Services\LocaleRegistry::class);
+        $this->app->singleton(\App\Services\CountryRegistry::class);
     }
 
     /**
