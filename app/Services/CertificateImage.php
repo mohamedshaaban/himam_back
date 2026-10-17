@@ -97,7 +97,10 @@ class CertificateImage
      */
     private function qr(Certificate $certificate): string
     {
-        $url = url('/api/certificates/verify/'.$certificate->verification_code);
+        // The image, not the verification JSON. Someone scanning this with a
+        // phone camera wants to see the certificate; a raw JSON body is not
+        // what a reader holding a printed copy is asking for.
+        $url = url('/api/certificates/verify/'.$certificate->verification_code.'/image');
 
         $matrix = Encoder::encode($url, ErrorCorrectionLevel::M())->getMatrix();
         $count = $matrix->getWidth();
