@@ -351,11 +351,13 @@ the certificates, and the reader's recalculated standing:
   "incorrect_questions": [],
   "new_certificates": [
     {
-      "id": 29,
-      "serial": "CERT-2026-WUL0TB",
+      "id": 35,
+      "serial": "CERT-2026-VZA9DP",
       "title": "مقدمة في القراءة المنظمة",
+      "image": "http://localhost/api/certificates/verify/92907b4d-c787-4941-bf5e-80fa5348d63b/image",
+      "image_template": "http://localhost:8000/storage/uploads/certificate-template.png",
       "issued_at": "2026-10-17",
-      "verification_url": "http://localhost/api/certificates/verify/5783c6bc-557f-40c9-bc2b-b457a4b738fd"
+      "verification_url": "http://localhost/api/certificates/verify/92907b4d-c787-4941-bf5e-80fa5348d63b"
     }
   ]
 }
@@ -404,18 +406,40 @@ A certificate per book, and one per level when all its books are done.
   "level": null,
   "title": "مقدمة في القراءة المنظمة",
   "earned": true,
-  "serial": "CERT-2026-WUL0TB",
+  "image": "http://localhost:8000/storage/uploads/certificate-template.png",
+  "serial": "CERT-2026-VZA9DP",
   "issued_at": "2026-10-17",
-  "verification_url": "http://localhost/api/certificates/verify/5783c6bc-557f-40c9-bc2b-b457a4b738fd",
+  "verification_url": "http://localhost/api/certificates/verify/92907b4d-c787-4941-bf5e-80fa5348d63b",
   "sections_read": 3,
-  "sections_total": 3,
-  "percent": 100
-}
+  …
 ```
 
 `scope` is `book` or `level`. A reader finishing the last book of a level
 earns **both at once**, so a screen that assumes one per event will drop the
 other.
+
+### The certificate as a document
+
+Every certificate carries `image`: the document itself, already bearing the
+holder's name, what they finished, the level, the mark and the date of the
+exam.
+
+```
+GET /api/certificates/verify/{verification_code}/image
+```
+
+**Public, and no token.** A certificate is shown to people who are not readers
+of this app, so it can be opened, shared or printed from the link as it
+stands. It is keyed by the verification code — a UUID, the same one the QR
+carries — rather than by the certificate id, so the only way to reach one is
+to be given its link.
+
+It answers `image/svg+xml` whatever `Accept` asks for, and `404` for a code
+that does not exist. SVG because the text stays text: the Arabic shapes
+correctly and it is sharp from a list thumbnail to an A4 print.
+
+`image_template` beside it is the blank artwork, for a client that would
+rather lay the text out itself.
 
 ---
 

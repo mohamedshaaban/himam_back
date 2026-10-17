@@ -145,7 +145,7 @@ Content-Type: application/json
 
 {
   "name": "A Reader",
-  "email": "api1792229900@himam.test",
+  "email": "api1792231566@himam.test",
   "password": "password123",
   "password_confirmation": "password123",
   "gender": "male",
@@ -160,11 +160,11 @@ Content-Type: application/json
 
 ```json
 {
-  "token": "13|h45SfkpUTzoHfPOtpgrrmGUtwB92z2h8rhlvhJJvf5bda2f5",
+  "token": "21|5BDbhOzPg9LW9q6WKMynhTfDXYDOQvg1lF2SMsxRe7d9d9d0",
   "user": {
-    "id": 14,
+    "id": 16,
     "name": "A Reader",
-    "email": "api1792229900@himam.test",
+    "email": "api1792231566@himam.test",
     "gender": "male",
     "city": "Kuwait City",
     "country": "KW",
@@ -174,7 +174,7 @@ Content-Type: application/json
     "locale": "en",
     "points": 0,
     "level": null,
-    "created_at": "2026-10-17T09:38:21+00:00"
+    "created_at": "2026-10-17T10:06:06+00:00"
   }
 }
 ```
@@ -190,7 +190,7 @@ Accept-Language: en
 Content-Type: application/json
 
 {
-  "email": "api1792229900@himam.test",
+  "email": "api1792231566@himam.test",
   "password": "password123"
 }
 ```
@@ -199,11 +199,11 @@ Content-Type: application/json
 
 ```json
 {
-  "token": "14|zxAeHNCiA8kk8yn7eikxdPEJdugWkI0eDH8FSNIyd3ba384e",
+  "token": "22|aGEek6MTVbGweowJ9DFi45td0J5Ql765iHk9FSx1a7522a0d",
   "user": {
-    "id": 14,
+    "id": 16,
     "name": "A Reader",
-    "email": "api1792229900@himam.test",
+    "email": "api1792231566@himam.test",
     "gender": "male",
     "city": "Kuwait City",
     "country": "KW",
@@ -213,7 +213,7 @@ Content-Type: application/json
     "locale": "en",
     "points": 0,
     "level": null,
-    "created_at": "2026-10-17T09:38:21+00:00"
+    "created_at": "2026-10-17T10:06:06+00:00"
   }
 }
 ```
@@ -232,9 +232,9 @@ Authorization: Bearer <token>
 ```json
 {
   "data": {
-    "id": 14,
+    "id": 16,
     "name": "A Reader",
-    "email": "api1792229900@himam.test",
+    "email": "api1792231566@himam.test",
     "gender": "male",
     "city": "Kuwait City",
     "country": "KW",
@@ -246,7 +246,7 @@ Authorization: Bearer <token>
     "level": null,
     "badges_count": 0,
     "certificates_count": 0,
-    "created_at": "2026-10-17T09:38:21+00:00"
+    "created_at": "2026-10-17T10:06:06+00:00"
   }
 }
 ```
@@ -262,7 +262,7 @@ Accept-Language: en
 Content-Type: application/json
 
 {
-  "email": "api1792229900@himam.test"
+  "email": "api1792231566@himam.test"
 }
 ```
 
@@ -451,7 +451,7 @@ Authorization: Bearer <token>
     {
       "id": 4,
       "screen": "books",
-      "image": "http://127.0.0.1:8007/assets/banner.svg",
+      "image": "http://127.0.0.1:8009/assets/banner.svg",
       "caption": "First level books",
       "href": null,
       "position": 0
@@ -459,7 +459,7 @@ Authorization: Bearer <token>
     {
       "id": 5,
       "screen": "books",
-      "image": "http://127.0.0.1:8007/assets/certificate.png",
+      "image": "http://127.0.0.1:8009/assets/certificate.png",
       "caption": "Level completion certificate",
       "href": null,
       "position": 1
@@ -467,7 +467,7 @@ Authorization: Bearer <token>
     {
       "id": 6,
       "screen": "books",
-      "image": "http://127.0.0.1:8007/assets/badge.png",
+      "image": "http://127.0.0.1:8009/assets/badge.png",
       "caption": "Reading badges",
       "href": null,
       "position": 2
@@ -502,7 +502,7 @@ Authorization: Bearer <token>
     "slug": "about",
     "title": "About Himam",
     "body": "<p>Himam is a scholarly programme from the <strong>Murtaqi Scientific Association</strong>, built to make structured reading achievable — to turn it from an intermittent wish into a settled habit.</p><h3>How the programme works</h3><p>It draws on the great books and trusted scholarly sources, divided into short sections, each followed by a brief quiz that settles what was read. Every section passed adds points, unlocks badges, and brings the level certificate closer.</p><h3>Our aim</h3><p>That every student of knowledge has a clear reading plan to follow, and sees the effect in themselves before they see it in a points total.</p>",
-    "updated_at": "2026-10-16T19:24:11+00:00"
+    "updated_at": "2026-10-17T09:36:59+00:00"
   }
 }
 ```
@@ -617,7 +617,7 @@ Authorization: Bearer <token>
       "title": "Introduction to Structured Reading",
       "author": "Prepared by the programme administration",
       "description": "A practical introduction to what structured reading means and the tools it uses, setting out a weekly plan that begins with a goal and ends with a review.",
-      "cover": "http://127.0.0.1:8007/assets/banner.svg",
+      "cover": "http://127.0.0.1:8009/assets/banner.svg",
       "pdf": null,
       "has_own_quiz": true,
       "quiz_button": {
@@ -669,7 +669,7 @@ Authorization: Bearer <token>
     "title": "Introduction to Structured Reading",
     "author": "Prepared by the programme administration",
     "description": "A practical introduction to what structured reading means and the tools it uses, setting out a weekly plan that begins with a goal and ends with a review.",
-    "cover": "http://127.0.0.1:8007/assets/banner.svg",
+    "cover": "http://127.0.0.1:8009/assets/banner.svg",
     "pdf": null,
     "has_own_quiz": true,
     "quiz_button": {
@@ -692,7 +692,7 @@ Authorization: Bearer <token>
         "book_id": 1,
         "title": "Why We Read Regularly",
         "position": 1,
-        "pdf": "http://127.0.0.1:8007/storage/uploads/sample-section.pdf",
+        "pdf": "http://127.0.0.1:8009/storage/uploads/sample-section.pdf",
         "read": false
       },
       {
@@ -700,7 +700,7 @@ Authorization: Bearer <token>
         "book_id": 1,
         "title": "Building a Reading Plan",
         "position": 2,
-        "pdf": "http://127.0.0.1:8007/storage/uploads/sample-section.pdf",
+        "pdf": "http://127.0.0.1:8009/storage/uploads/sample-section.pdf",
         "read": false
       },
       {
@@ -730,7 +730,7 @@ Authorization: Bearer <token>
     "title": "Why We Read Regularly",
     "position": 1,
     "body": "This section opens by settling the purpose of reading: what the reader wants to arrive at once the book is finished, and how that translates into clear weekly steps.\n\nIt then turns to the practical tools: dividing the book into equal sections, fixing a set time to read, and taking notes in the margin or on a separate card.\n\nIt insists that structured reading is not speed of completion but regularity of follow-through; a few pages every day serve better than bursts of reading that stop after a week.\n\nThe section closes by asking the reader to review briefly what they have read, and to write three main ideas in their own words before moving on to the quiz.",
-    "pdf": "http://127.0.0.1:8007/storage/uploads/sample-section.pdf",
+    "pdf": "http://127.0.0.1:8009/storage/uploads/sample-section.pdf",
     "read": false
   },
   "meta": {
@@ -833,7 +833,7 @@ Authorization: Bearer <token>
         "id": 1,
         "title": "Introduction to Structured Reading",
         "author": "Prepared by the programme administration",
-        "cover": "http://127.0.0.1:8007/assets/banner.svg",
+        "cover": "http://127.0.0.1:8009/assets/banner.svg",
         "points": 400,
         "order_index": 0,
         "unlocked": true,
@@ -848,7 +848,7 @@ Authorization: Bearer <token>
         "id": 2,
         "title": "Foundations of Systematic Thinking",
         "author": "Prepared by the programme administration",
-        "cover": "http://127.0.0.1:8007/assets/banner.svg",
+        "cover": "http://127.0.0.1:8009/assets/banner.svg",
         "points": 400,
         "order_index": 1,
         "unlocked": true,
@@ -1005,7 +1005,7 @@ Authorization: Bearer <token>
     "title": "Introduction to Structured Reading",
     "author": "Prepared by the programme administration",
     "description": "A practical introduction to what structured reading means and the tools it uses, setting out a weekly plan that begins with a goal and ends with a review.",
-    "cover": "http://127.0.0.1:8007/assets/banner.svg",
+    "cover": "http://127.0.0.1:8009/assets/banner.svg",
     "pdf": null,
     "has_own_quiz": true,
     "quiz_button": {
@@ -1028,7 +1028,7 @@ Authorization: Bearer <token>
         "book_id": 1,
         "title": "Why We Read Regularly",
         "position": 1,
-        "pdf": "http://127.0.0.1:8007/storage/uploads/sample-section.pdf",
+        "pdf": "http://127.0.0.1:8009/storage/uploads/sample-section.pdf",
         "read": true
       },
       {
@@ -1155,7 +1155,7 @@ Content-Type: application/json
       "id": 1,
       "name": "The Persistent",
       "description": "Passed your first section of the programme.",
-      "image": "http://127.0.0.1:8007/assets/badge.png",
+      "image": "http://127.0.0.1:8009/assets/badge.png",
       "criteria_type": "sections_read",
       "criteria_value": 1,
       "position": 0
@@ -1225,7 +1225,7 @@ Content-Type: application/json
       "id": 3,
       "name": "Book Finisher",
       "description": "Completed every section of one book.",
-      "image": "http://127.0.0.1:8007/assets/badge.png",
+      "image": "http://127.0.0.1:8009/assets/badge.png",
       "criteria_type": "books_completed",
       "criteria_value": 1,
       "position": 2
@@ -1233,11 +1233,13 @@ Content-Type: application/json
   ],
   "new_certificates": [
     {
-      "id": 31,
-      "serial": "CERT-2026-AUZ21L",
+      "id": 34,
+      "serial": "CERT-2026-9TNCHK",
       "title": "Introduction to Structured Reading",
+      "image": "http://127.0.0.1:8009/api/certificates/verify/55842955-a81f-4ceb-afea-76935bf94fc6/image",
+      "image_template": "http://127.0.0.1:8009/storage/uploads/certificate-template.png",
       "issued_at": "2026-10-17",
-      "verification_url": "http://127.0.0.1:8007/api/certificates/verify/48339f03-952f-4793-992c-ff0da61cbc4a"
+      "verification_url": "http://127.0.0.1:8009/api/certificates/verify/55842955-a81f-4ceb-afea-76935bf94fc6"
     }
   ],
   "stats": {
@@ -1245,11 +1247,7 @@ Content-Type: application/json
     "sections_read": 3,
     "sections_total": 18,
     "books_completed": 1,
-    "books_total": 6,
-    "badges_earned": 2,
-    "certificates": 1
-  }
-}
+  …
 ```
 
 #### A retake
@@ -1344,32 +1342,31 @@ Authorization: Bearer <token>
       "id": 1,
       "name": "The Persistent",
       "description": "Passed your first section of the programme.",
-      "image": "http://127.0.0.1:8007/assets/badge.png",
+      "image": "http://127.0.0.1:8009/assets/badge.png",
       "criteria_type": "sections_read",
       "criteria_value": 1,
       "position": 0,
       "earned": true,
-      "awarded_at": "2026-10-17 09:38:41"
+      "awarded_at": "2026-10-17 10:06:15"
     },
     {
       "id": 3,
       "name": "Book Finisher",
       "description": "Completed every section of one book.",
-      "image": "http://127.0.0.1:8007/assets/badge.png",
+      "image": "http://127.0.0.1:8009/assets/badge.png",
       "criteria_type": "books_completed",
       "criteria_value": 1,
       "position": 2,
       "earned": true,
-      "awarded_at": "2026-10-17 09:38:42"
+      "awarded_at": "2026-10-17 10:06:15"
     }
   ],
   "certificates": [
     {
-      "id": 31,
-      "serial": "CERT-2026-AUZ21L",
+      "id": 34,
+      "serial": "CERT-2026-9TNCHK",
       "title": "Introduction to Structured Reading",
-      "issued_at": "2026-10-17",
-      "level": null,
+      "image": "http://127.0.0.1:8009/api/certificates/verify/55842955-a81f-4ceb-afea-76935bf94fc6/image",
   …
 ```
 
@@ -1455,7 +1452,7 @@ Authorization: Bearer <token>
       "id": 1,
       "name": "The Persistent",
       "description": "Passed your first section of the programme.",
-      "image": "http://127.0.0.1:8007/assets/badge.png",
+      "image": "http://127.0.0.1:8009/assets/badge.png",
       "criteria_type": "sections_read",
       "criteria_value": 1,
       "position": 0,
@@ -1465,7 +1462,7 @@ Authorization: Bearer <token>
       "id": 2,
       "name": "The Regular Reader",
       "description": "Passed five sections.",
-      "image": "http://127.0.0.1:8007/assets/badge.png",
+      "image": "http://127.0.0.1:8009/assets/badge.png",
       "criteria_type": "sections_read",
       "criteria_value": 5,
       "position": 1,
@@ -1475,7 +1472,7 @@ Authorization: Bearer <token>
       "id": 3,
       "name": "Book Finisher",
       "description": "Completed every section of one book.",
-      "image": "http://127.0.0.1:8007/assets/badge.png",
+      "image": "http://127.0.0.1:8009/assets/badge.png",
       "criteria_type": "books_completed",
       "criteria_value": 1,
       "position": 2,
@@ -1485,7 +1482,7 @@ Authorization: Bearer <token>
       "id": 4,
       "name": "Level Reader",
       "description": "Completed two whole books.",
-      "image": "http://127.0.0.1:8007/assets/badge.png",
+      "image": "http://127.0.0.1:8009/assets/badge.png",
       "criteria_type": "books_completed",
       "criteria_value": 2,
       "position": 3,
@@ -1512,7 +1509,7 @@ Authorization: Bearer <token>
       "rank": 1,
       "id": 2,
       "name": "عبدالله سالم",
-      "avatar": "http://127.0.0.1:8007/assets/avatar-1.svg",
+      "avatar": "http://127.0.0.1:8009/assets/avatar-1.svg",
       "level": "Third Level",
       "books": 4,
       "points": 1800
@@ -1521,7 +1518,7 @@ Authorization: Bearer <token>
       "rank": 2,
       "id": 3,
       "name": "محمد احمد",
-      "avatar": "http://127.0.0.1:8007/assets/avatar-2.svg",
+      "avatar": "http://127.0.0.1:8009/assets/avatar-2.svg",
       "level": "Second Level",
       "books": 3,
       "points": 1300
@@ -1530,7 +1527,7 @@ Authorization: Bearer <token>
       "rank": 3,
       "id": 4,
       "name": "خالد يوسف",
-      "avatar": "http://127.0.0.1:8007/assets/avatar-3.svg",
+      "avatar": "http://127.0.0.1:8009/assets/avatar-3.svg",
       "level": "Second Level",
       "books": 3,
       "points": 1300
@@ -1539,7 +1536,7 @@ Authorization: Bearer <token>
       "rank": 4,
       "id": 5,
       "name": "سعود ناصر",
-      "avatar": "http://127.0.0.1:8007/assets/avatar-1.svg",
+      "avatar": "http://127.0.0.1:8009/assets/avatar-1.svg",
       "level": "First Level",
       "books": 2,
       "points": 800
@@ -1548,7 +1545,7 @@ Authorization: Bearer <token>
       "rank": 5,
       "id": 6,
       "name": "فهد عبدالعزيز",
-      "avatar": "http://127.0.0.1:8007/assets/avatar-2.svg",
+      "avatar": "http://127.0.0.1:8009/assets/avatar-2.svg",
       "level": "First Level",
       "books": 2,
       "points": 800
@@ -1575,9 +1572,11 @@ Authorization: Bearer <token>
 {
   "data": [
     {
-      "id": 31,
-      "serial": "CERT-2026-AUZ21L",
+      "id": 34,
+      "serial": "CERT-2026-9TNCHK",
       "title": "Introduction to Structured Reading",
+      "image": "http://127.0.0.1:8009/api/certificates/verify/55842955-a81f-4ceb-afea-76935bf94fc6/image",
+      "image_template": "http://127.0.0.1:8009/storage/uploads/certificate-template.png",
       "issued_at": "2026-10-17",
       "level": null,
       "book": {
@@ -1585,7 +1584,7 @@ Authorization: Bearer <token>
         "title": "Introduction to Structured Reading",
         "author": "Prepared by the programme administration",
         "description": "A practical introduction to what structured reading means and the tools it uses, setting out a weekly plan that begins with a goal and ends with a review.",
-        "cover": "http://127.0.0.1:8007/assets/banner.svg",
+        "cover": "http://127.0.0.1:8009/assets/banner.svg",
         "pdf": null,
         "has_own_quiz": true,
         "quiz_button": {
@@ -1597,10 +1596,7 @@ Authorization: Bearer <token>
         "points": 400,
         "position": 0
       },
-      "verification_url": "http://127.0.0.1:8007/api/certificates/verify/48339f03-952f-4793-992c-ff0da61cbc4a"
-    }
-  ]
-}
+  …
 ```
 
 #### Every certificate, held or not
@@ -1626,9 +1622,10 @@ Authorization: Bearer <token>
       "level": null,
       "title": "Introduction to Structured Reading",
       "earned": true,
-      "serial": "CERT-2026-AUZ21L",
+      "image": "http://127.0.0.1:8009/storage/uploads/certificate-template.png",
+      "serial": "CERT-2026-9TNCHK",
       "issued_at": "2026-10-17",
-      "verification_url": "http://127.0.0.1:8007/api/certificates/verify/48339f03-952f-4793-992c-ff0da61cbc4a",
+      "verification_url": "http://127.0.0.1:8009/api/certificates/verify/55842955-a81f-4ceb-afea-76935bf94fc6",
       "sections_read": 3,
       "sections_total": 3,
       "percent": 100
@@ -1642,6 +1639,7 @@ Authorization: Bearer <token>
       "level": null,
       "title": "Foundations of Systematic Thinking",
       "earned": false,
+      "image": "http://127.0.0.1:8009/storage/uploads/certificate-template.png",
       "serial": null,
       "issued_at": null,
       "verification_url": null,
@@ -1653,13 +1651,6 @@ Authorization: Bearer <token>
       "scope": "book",
       "book": {
         "id": 3,
-        "title": "The Great Books: A Reader's Guide"
-      },
-      "level": null,
-      "title": "The Great Books: A Reader's Guide",
-      "earned": false,
-      "serial": null,
-      "issued_at": null,
   …
 ```
 
@@ -1668,7 +1659,7 @@ Authorization: Bearer <token>
 Public, and behind the QR code printed on every certificate.
 
 ```http
-GET /api/certificates/verify/48339f03-952f-4793-992c-ff0da61cbc4a
+GET /api/certificates/verify/55842955-a81f-4ceb-afea-76935bf94fc6
 Accept: application/json
 Accept-Language: en
 ```
@@ -1678,7 +1669,7 @@ Accept-Language: en
 ```json
 {
   "valid": true,
-  "serial": "CERT-2026-AUZ21L",
+  "serial": "CERT-2026-9TNCHK",
   "holder": "A Reader",
   "title": "Introduction to Structured Reading",
   "level": null,
@@ -1712,34 +1703,36 @@ Authorization: Bearer <token>
 {
   "data": [
     {
-      "id": 77,
+      "id": 85,
+      "tag": "Badge",
+      "title": "New badge: The Persistent",
+      "body": "Congratulations — “The Persistent” has been added to your badges.",
+      "image": "http://127.0.0.1:8009/assets/badge.png",
+      "category": "badge",
+      "published_at": "2026-10-17T10:06:15+00:00",
+      "read": false
+    },
+    {
+      "id": 86,
       "tag": "Badge",
       "title": "New badge: Book Finisher",
       "body": "Congratulations — “Book Finisher” has been added to your badges.",
-      "image": "http://127.0.0.1:8007/assets/badge.png",
+      "image": "http://127.0.0.1:8009/assets/badge.png",
       "category": "badge",
-      "published_at": "2026-10-17T09:38:42+00:00",
+      "published_at": "2026-10-17T10:06:15+00:00",
       "read": false
     },
     {
-      "id": 78,
+      "id": 87,
       "tag": "Certificate",
       "title": "Your certificate for “Introduction to Structured Reading” has been issued",
-      "body": "Congratulations — your certificate for “Introduction to Structured Reading” has been issued with serial CERT-2026-AUZ21L. You will find it on the certificates page.",
-      "image": null,
-      "category": "certificate",
-      "published_at": "2026-10-17T09:38:42+00:00",
-      "read": false
-    },
-    {
-      "id": 76,
   …
 ```
 
 #### One announcement
 
 ```http
-GET /api/announcements/77
+GET /api/announcements/85
 Accept: application/json
 Accept-Language: en
 Authorization: Bearer <token>
@@ -1750,13 +1743,13 @@ Authorization: Bearer <token>
 ```json
 {
   "data": {
-    "id": 77,
+    "id": 85,
     "tag": "Badge",
-    "title": "New badge: Book Finisher",
-    "body": "Congratulations — “Book Finisher” has been added to your badges.",
-    "image": "http://127.0.0.1:8007/assets/badge.png",
+    "title": "New badge: The Persistent",
+    "body": "Congratulations — “The Persistent” has been added to your badges.",
+    "image": "http://127.0.0.1:8009/assets/badge.png",
     "category": "badge",
-    "published_at": "2026-10-17T09:38:42+00:00",
+    "published_at": "2026-10-17T10:06:15+00:00",
     "read": true
   }
 }
@@ -1765,7 +1758,7 @@ Authorization: Bearer <token>
 #### Mark one read
 
 ```http
-POST /api/announcements/77/read
+POST /api/announcements/85/read
 Accept: application/json
 Accept-Language: en
 Authorization: Bearer <token>
@@ -1776,7 +1769,7 @@ Authorization: Bearer <token>
 ```json
 {
   "data": {
-    "id": 77,
+    "id": 85,
     "read": true
   },
   "meta": {
@@ -1925,9 +1918,9 @@ Content-Type: application/json
 ```json
 {
   "data": {
-    "id": 14,
+    "id": 16,
     "name": "A Reader",
-    "email": "api1792229900@himam.test",
+    "email": "api1792231566@himam.test",
     "gender": "male",
     "city": "Kuwait City",
     "country": "KW",
@@ -1937,7 +1930,7 @@ Content-Type: application/json
     "locale": "en",
     "points": 400,
     "level": null,
-    "created_at": "2026-10-17T09:38:21+00:00"
+    "created_at": "2026-10-17T10:06:06+00:00"
   }
 }
 ```
@@ -2006,7 +1999,7 @@ Accept-Language: en
 Content-Type: application/json
 
 {
-  "email": "api1792229900@himam.test",
+  "email": "api1792231566@himam.test",
   "password": "wrong"
 }
 ```
@@ -2312,7 +2305,7 @@ object storage is configured.
 ## 13. Every route
 
 
-### Reader API — 40 endpoints
+### Reader API — 41 endpoints
 
 | Method | Path | Access |
 |---|---|---|
@@ -2335,6 +2328,7 @@ object storage is configured.
 | `GET` | `/api/certificates` | reader |
 | `GET` | `/api/certificates/available` | reader |
 | `GET` | `/api/certificates/verify/{code}` | public |
+| `GET` | `/api/certificates/verify/{code}/image` | public |
 | `GET` | `/api/certificates/{certificate}` | reader |
 | `GET` | `/api/contact` | public |
 | `GET` | `/api/countries` | public |

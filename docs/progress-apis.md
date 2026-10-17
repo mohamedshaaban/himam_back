@@ -398,6 +398,8 @@ What the reader holds.
     "id": 6,
     "serial": "CERT-2026-INTT26",
     "title": "المستوى الثاني",
+    "image": "http://localhost/api/certificates/verify/cc01e562-7b0d-435e-bad8-f4b65939440b/image",
+    "image_template": "http://localhost:8000/storage/uploads/certificate-template.png",
     "issued_at": "2026-10-17",
     "level": {
       "id": 2,
@@ -412,19 +414,11 @@ What the reader holds.
     "id": 5,
     "serial": "CERT-2026-HWIQIA",
     "title": "الوعي المعرفي",
+    "image": "http://localhost/api/certificates/verify/36853e55-4dd5-42da-a494-36c65597640b/image",
+    "image_template": "http://localhost:8000/storage/uploads/certificate-template.png",
     "issued_at": "2026-10-17",
     "level": null,
     "book": {
-      "id": 4,
-      "title": "الوعي المعرفي",
-      "author": "إعداد إدارة البرنامج",
-      "description": "يبني عند القارئ وعياً بما يقرأ: كيف يميّز الرأي من الدليل، والمحكم من المتشابه.",
-      "cover": "http://localhost:8000/assets/banner.svg",
-      "pdf": null,
-      "has_own_quiz": true,
-      "quiz_button": {
-        "visible": false,
-        "label": "ابدأ الاختبار",
   …
 ```
 
@@ -437,6 +431,12 @@ A reader finishing the last book of a level earns **both at once**, so a screen
 that assumes one certificate per event will drop the other.
 
 `GET /api/certificates/{id}` returns one, with the holder attached.
+
+Each row carries `image`: a public URL to the certificate as a document,
+drawn with the holder's name, the title, the level, the mark and the date of
+the exam on it. It needs no token, because the people a certificate is shown
+to are usually not readers of this app — see **mobile-changes.md** for the
+shape of it.
 
 ### Retakes do not reissue
 
@@ -462,6 +462,7 @@ Everything issuable, held or not, so a screen can show what is still ahead.
     "level": null,
     "title": "مقدمة في القراءة المنظمة",
     "earned": true,
+    "image": "http://localhost:8000/storage/uploads/certificate-template.png",
     "serial": "CERT-2026-FX4ZQ0",
     "issued_at": "2026-10-17",
     "verification_url": "http://localhost/api/certificates/verify/2691db78-2b1d-4024-a2f2-6df9105550f8",
@@ -478,6 +479,7 @@ Everything issuable, held or not, so a screen can show what is still ahead.
     "level": null,
     "title": "أصول التفكير المنهجي",
     "earned": true,
+    "image": "http://localhost:8000/storage/uploads/certificate-template.png",
     "serial": "CERT-2026-A5QJGE",
     "issued_at": "2026-10-17",
     "verification_url": "http://localhost/api/certificates/verify/ba47d2f9-da75-467e-b770-00cb1bafaed5",
@@ -492,10 +494,6 @@ Everything issuable, held or not, so a screen can show what is still ahead.
       "title": "أمهات الكتب: دليل القارئ"
     },
     "level": null,
-    "title": "أمهات الكتب: دليل القارئ",
-    "earned": true,
-    "serial": "CERT-2026-PVOEKL",
-    "issued_at": "2026-10-17",
   …
 ```
 
