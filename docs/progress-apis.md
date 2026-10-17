@@ -50,7 +50,7 @@ at the top level, *not* wrapped in `data` the way most of the API is.
       "criteria_value": 1,
       "position": 0,
       "earned": true,
-      "awarded_at": "2026-10-16 19:24:12"
+      "awarded_at": "2026-10-17 09:37:01"
     },
     {
       "id": 2,
@@ -61,7 +61,7 @@ at the top level, *not* wrapped in `data` the way most of the API is.
       "criteria_value": 5,
       "position": 1,
       "earned": true,
-      "awarded_at": "2026-10-16 19:24:12"
+      "awarded_at": "2026-10-17 09:37:01"
     },
     {
       "id": 3,
@@ -72,7 +72,7 @@ at the top level, *not* wrapped in `data` the way most of the API is.
       "criteria_value": 1,
       "position": 2,
       "earned": true,
-      "awarded_at": "2026-10-16 19:24:12"
+      "awarded_at": "2026-10-17 09:37:01"
     },
     {
       "id": 4,
@@ -132,8 +132,8 @@ these ratios, so the figure always describes what is in front of the reader.
   "read_percent": 100,
   "certificate": {
     "id": 3,
-    "serial": "CERT-2026-0WGOO8",
-    "issued_at": "2026-10-16"
+    "serial": "CERT-2026-RZE4AR",
+    "issued_at": "2026-10-17"
   },
   "books": [
     {
@@ -152,21 +152,21 @@ these ratios, so the figure always describes what is in front of the reader.
           "title": "لماذا نقرأ بانتظام",
           "position": 1,
           "read": true,
-          "read_at": "2026-10-16"
+          "read_at": "2026-10-17"
         },
         {
           "id": 2,
           "title": "بناء خطة القراءة",
           "position": 2,
           "read": true,
-          "read_at": "2026-10-16"
+          "read_at": "2026-10-17"
         },
         {
           "id": 3,
           "title": "المراجعة والتلخيص",
           "position": 3,
           "read": true,
-          "read_at": "2026-10-16"
+          "read_at": "2026-10-17"
         }
       ]
     },
@@ -186,7 +186,7 @@ these ratios, so the figure always describes what is in front of the reader.
           "title": "لماذا نقرأ بانتظام",
           "position": 1,
           "read": true,
-          "read_at": "2026-10-16"
+          "read_at": "2026-10-17"
         },
         {
           "id": 5,
@@ -396,9 +396,9 @@ What the reader holds.
 [
   {
     "id": 6,
-    "serial": "CERT-2026-KGMS8Z",
+    "serial": "CERT-2026-INTT26",
     "title": "المستوى الثاني",
-    "issued_at": "2026-10-16",
+    "issued_at": "2026-10-17",
     "level": {
       "id": 2,
       "name": "المستوى الثاني",
@@ -406,13 +406,13 @@ What the reader holds.
       "position": 2
     },
     "book": null,
-    "verification_url": "http://localhost/api/certificates/verify/8699f3b6-678a-49d8-8d23-57def9205cf0"
+    "verification_url": "http://localhost/api/certificates/verify/cc01e562-7b0d-435e-bad8-f4b65939440b"
   },
   {
     "id": 5,
-    "serial": "CERT-2026-FTWOPV",
+    "serial": "CERT-2026-HWIQIA",
     "title": "الوعي المعرفي",
-    "issued_at": "2026-10-16",
+    "issued_at": "2026-10-17",
     "level": null,
     "book": {
       "id": 4,
@@ -462,9 +462,9 @@ Everything issuable, held or not, so a screen can show what is still ahead.
     "level": null,
     "title": "مقدمة في القراءة المنظمة",
     "earned": true,
-    "serial": "CERT-2026-NDKNSB",
-    "issued_at": "2026-10-16",
-    "verification_url": "http://localhost/api/certificates/verify/d2d58ca5-598c-4af3-bbd1-33d86269c709",
+    "serial": "CERT-2026-FX4ZQ0",
+    "issued_at": "2026-10-17",
+    "verification_url": "http://localhost/api/certificates/verify/2691db78-2b1d-4024-a2f2-6df9105550f8",
     "sections_read": 3,
     "sections_total": 3,
     "percent": 100
@@ -478,9 +478,9 @@ Everything issuable, held or not, so a screen can show what is still ahead.
     "level": null,
     "title": "أصول التفكير المنهجي",
     "earned": true,
-    "serial": "CERT-2026-OHVARZ",
-    "issued_at": "2026-10-16",
-    "verification_url": "http://localhost/api/certificates/verify/fc6a2390-9c56-4075-907a-58666103dd8f",
+    "serial": "CERT-2026-A5QJGE",
+    "issued_at": "2026-10-17",
+    "verification_url": "http://localhost/api/certificates/verify/ba47d2f9-da75-467e-b770-00cb1bafaed5",
     "sections_read": 3,
     "sections_total": 3,
     "percent": 100
@@ -494,8 +494,8 @@ Everything issuable, held or not, so a screen can show what is still ahead.
     "level": null,
     "title": "أمهات الكتب: دليل القارئ",
     "earned": true,
-    "serial": "CERT-2026-T6FGBP",
-    "issued_at": "2026-10-16",
+    "serial": "CERT-2026-PVOEKL",
+    "issued_at": "2026-10-17",
   …
 ```
 
@@ -518,11 +518,11 @@ Public, and behind the QR code printed on every certificate.
 ```json
 {
   "valid": true,
-  "serial": "CERT-2026-KGMS8Z",
+  "serial": "CERT-2026-INTT26",
   "holder": "عبدالله سالم",
   "title": "المستوى الثاني",
   "level": "المستوى الثاني",
-  "issued_at": "2026-10-16"
+  "issued_at": "2026-10-17"
 }
 ```
 

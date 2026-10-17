@@ -39,12 +39,26 @@ when deciding whether to offer the exam.
 |---|---|---|
 | `null` | the exam is open | the button, using `label` |
 | `unread` | the reading is not finished | no button; "finish the book first" |
+| `perfect` | already scored full marks | no button — there is nothing to gain |
 | `no_questions` | the exam has not been written | no button |
 | `hidden` | an editor turned it off | no button |
 | `not_signed_in` | nobody to examine | the sign-in prompt |
 
 `label` arrives already in the requested language. Render it; do not hard-code
-one.
+one — **it changes**. A reader who has passed but not perfectly is offered a
+better mark rather than the exam, and the label says so:
+
+```json
+{ "visible": true, "label": "تحسين نتيجة الاختبار", "reason": null }
+```
+
+And once they score full marks it goes entirely:
+
+```json
+{ "visible": false, "label": "ابدأ الاختبار", "reason": "perfect" }
+```
+
+When `visible` is false, ignore `label`.
 
 ### It opens as the reading finishes
 
@@ -124,6 +138,7 @@ Every book carries a `progress` block for the signed-in reader:
   "sections_total": 3,
   "sections_read": 1,
   "read_percent": 33,
+  "percent": 25,
   "completed": false
 }
 ```
@@ -132,18 +147,30 @@ Every book carries a `progress` block for the signed-in reader:
 |---|---|
 | `sections_total` | how many sections the book has |
 | `sections_read` | how many the reader has opened |
-| `read_percent` | the progress bar |
+| `read_percent` | how far through the **reading** |
+| `percent` | how far through the **book**, exam included |
 | `completed` | the book is finished — its exam passed |
 
-**Drive the bar from `read_percent`.** `completed` is a separate idea: reading
-every section gets you to 100% and opens the exam; passing the exam is what
-makes `completed` true.
+**Two figures, because they answer different questions.** The exam counts as
+one step beside the sections, so a three-section book has four things to do:
+
+```
+nothing done    read_percent   0    percent   0
+1 of 3 read                   33             25
+2 of 3 read                   67             50
+3 of 3 read                  100             75   ← the exam opens here
+exam passed                  100            100
+```
+
+Use `percent` for a completion bar and `read_percent` for a reading bar. Use
+`completed` for "finished" — never `percent == 100`, though they agree.
 
 ```json
 {
   "sections_total": 3,
   "sections_read": 3,
   "read_percent": 100,
+  "percent": 100,
   "completed": true
 }
 ```
@@ -324,11 +351,11 @@ the certificates, and the reader's recalculated standing:
   "incorrect_questions": [],
   "new_certificates": [
     {
-      "id": 28,
-      "serial": "CERT-2026-VJBDJC",
+      "id": 29,
+      "serial": "CERT-2026-WUL0TB",
       "title": "مقدمة في القراءة المنظمة",
-      "issued_at": "2026-10-16",
-      "verification_url": "http://localhost/api/certificates/verify/101af2ad-41db-4fd9-8b7d-fb022127b208"
+      "issued_at": "2026-10-17",
+      "verification_url": "http://localhost/api/certificates/verify/5783c6bc-557f-40c9-bc2b-b457a4b738fd"
     }
   ]
 }
@@ -377,9 +404,9 @@ A certificate per book, and one per level when all its books are done.
   "level": null,
   "title": "مقدمة في القراءة المنظمة",
   "earned": true,
-  "serial": "CERT-2026-VJBDJC",
-  "issued_at": "2026-10-16",
-  "verification_url": "http://localhost/api/certificates/verify/101af2ad-41db-4fd9-8b7d-fb022127b208",
+  "serial": "CERT-2026-WUL0TB",
+  "issued_at": "2026-10-17",
+  "verification_url": "http://localhost/api/certificates/verify/5783c6bc-557f-40c9-bc2b-b457a4b738fd",
   "sections_read": 3,
   "sections_total": 3,
   "percent": 100
