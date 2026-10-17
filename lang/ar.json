@@ -8,8 +8,10 @@
     "Badge revoked.": "تم سحب الوسام.",
     "Book deleted.": "تم حذف الكتاب.",
     "Certificate revoked.": "تم سحب الشهادة.",
+    "Excellent": "بتقدير ممتاز",
     "File deleted.": "تم حذف الملف.",
     "Finish the previous book in this programme first.": "أتمّ الكتاب السابق في هذا البرنامج أولاً.",
+    "Good": "بتقدير جيد",
     "If that address has an account, a reset link is on its way.": "إن كان لهذا البريد حساب، فسيصله رابط الاستعادة.",
     "Improve your score": "تحسين نتيجة الاختبار",
     "Language deleted.": "تم حذف اللغة.",
@@ -18,6 +20,7 @@
     "No certificate matches this code.": "لا توجد شهادة بهذا الرمز.",
     "No exam has been written for this book yet.": "لم تُكتب أسئلة هذا الكتاب بعد.",
     "Page deleted.": "تم حذف الصفحة.",
+    "Pass": "بتقدير مقبول",
     "Password updated.": "تم تحديث كلمة المرور.",
     "Program deleted.": "تم حذف البرنامج.",
     "Provide a value in at least one language.": "اكتب القيمة بلغة واحدة على الأقل.",
@@ -32,9 +35,12 @@
     "That page does not exist.": "هذه الصفحة غير موجودة.",
     "The current password is incorrect.": "كلمة المرور الحالية غير صحيحة.",
     "These credentials do not match our records.": "بيانات الدخول لا تطابق سجلاتنا.",
+    "This is to certify that": "تشهد جمعية مرتقي العلمية بأن",
     "This reset link is invalid or has expired. Please request a new one.": "رابط الاستعادة غير صالح أو انتهت صلاحيته. يُرجى طلب رابط جديد.",
     "User deleted.": "تم حذف المستخدم.",
+    "Very good": "بتقدير جيد جداً",
     "You cannot delete your own account.": "لا يمكنك حذف حسابك.",
     "You cannot remove your own administrator role.": "لا يمكنك سحب صلاحية الإدارة عن نفسك.",
-    "Your password has been reset. You can sign in now.": "تم تغيير كلمة المرور، ويمكنك تسجيل الدخول الآن."
+    "Your password has been reset. You can sign in now.": "تم تغيير كلمة المرور، ويمكنك تسجيل الدخول الآن.",
+    "has successfully completed": "قد أتمّ بنجاح"
 }

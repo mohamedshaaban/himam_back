@@ -8,8 +8,10 @@
     "Badge revoked.": "Insigne retiré.",
     "Book deleted.": "Livre supprimé.",
     "Certificate revoked.": "Certificat retiré.",
+    "Excellent": "Mention excellent",
     "File deleted.": "Fichier supprimé.",
     "Finish the previous book in this programme first.": "Terminez d’abord le livre précédent de ce programme.",
+    "Good": "Mention bien",
     "If that address has an account, a reset link is on its way.": "Si cette adresse correspond à un compte, un lien vient d’être envoyé.",
     "Improve your score": "Améliorer votre résultat",
     "Language deleted.": "Langue supprimée.",
@@ -18,6 +20,7 @@
     "No certificate matches this code.": "Aucun certificat ne correspond à ce code.",
     "No exam has been written for this book yet.": "Aucun examen n'a encore été écrit pour ce livre.",
     "Page deleted.": "Page supprimée.",
+    "Pass": "Mention passable",
     "Password updated.": "Mot de passe mis à jour.",
     "Program deleted.": "Programme supprimé.",
     "Provide a value in at least one language.": "Renseignez au moins une langue.",
@@ -32,9 +35,12 @@
     "That page does not exist.": "Cette page n’existe pas.",
     "The current password is incorrect.": "Le mot de passe actuel est incorrect.",
     "These credentials do not match our records.": "Ces identifiants ne correspondent à aucun compte.",
+    "This is to certify that": "Il est certifié que",
     "This reset link is invalid or has expired. Please request a new one.": "Ce lien est invalide ou a expiré. Veuillez en demander un nouveau.",
     "User deleted.": "Utilisateur supprimé.",
+    "Very good": "Mention très bien",
     "You cannot delete your own account.": "Vous ne pouvez pas supprimer votre propre compte.",
     "You cannot remove your own administrator role.": "Vous ne pouvez pas retirer votre propre rôle d’administrateur.",
-    "Your password has been reset. You can sign in now.": "Votre mot de passe a été réinitialisé. Vous pouvez vous connecter."
+    "Your password has been reset. You can sign in now.": "Votre mot de passe a été réinitialisé. Vous pouvez vous connecter.",
+    "has successfully completed": "a terminé avec succès"
 }

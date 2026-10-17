@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CertificateResource;
 use App\Models\Certificate;
+use App\Services\CertificateImage;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -25,6 +27,32 @@ class CertificateController extends Controller
      * what is still ahead of them, with how much of it is done, not just what
      * they already hold.
      */
+    /**
+     * The certificate itself, drawn with this reader's details on it.
+     *
+     * Served as SVG rather than JSON because it is a document, not data: the
+     * client shows or prints it as it arrives.
+     *
+     * Public, like the verification endpoint beside it and for the same
+     * reason: the people a certificate is shown to are usually not readers of
+     * this app. The code is a UUID, so the only way to reach one is to be
+     * given its link.
+     */
+    public function image(string $code): Response
+    {
+        $certificate = Certificate::with(['user', 'book', 'level'])
+            ->where('verification_code', $code)
+            ->firstOrFail();
+
+        $svg = app(CertificateImage::class)->render($certificate);
+
+        return response($svg, 200, [
+            'Content-Type' => 'image/svg+xml; charset=utf-8',
+            'Cache-Control' => 'public, max-age=86400',
+            'Content-Disposition' => 'inline; filename="'.$certificate->serial.'.svg"',
+        ]);
+    }
+
     public function available(Request $request): JsonResponse
     {
         $user = $request->user();

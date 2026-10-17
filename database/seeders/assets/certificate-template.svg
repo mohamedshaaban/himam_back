@@ -80,15 +80,17 @@
   <line x1="380" y1="556" x2="742" y2="556" stroke="#D8CFB6" stroke-width="1.5"/>
 
   <!-- Seal -->
-  <g transform="translate(561 648)">
-    <circle r="54" fill="url(#gold)"/>
-    <circle r="45" fill="#FBF9F4"/>
-    <circle r="40" fill="none" stroke="url(#gold)" stroke-width="2"/>
-    <path d="M0 -26 L7.6 -8.1 L27 -8.1 L11.6 3.1 L17.6 21.9 L0 10.5 L-17.6 21.9 L-11.6 3.1 L-27 -8.1 L-7.6 -8.1 Z"
+  <!-- Lower and smaller than it was: at its old size and height it ran into
+       the grade and the date, which are the two lines a reader looks for. -->
+  <g transform="translate(561 676)">
+    <circle r="42" fill="url(#gold)"/>
+    <circle r="35" fill="#FBF9F4"/>
+    <circle r="31" fill="none" stroke="url(#gold)" stroke-width="1.6"/>
+    <path d="M0 -20 L5.9 -6.3 L21 -6.3 L9 2.4 L13.7 17 L0 8.2 L-13.7 17 L-9 2.4 L-21 -6.3 L-5.9 -6.3 Z"
           fill="url(#gold)"/>
     <!-- Ribbon tails -->
-    <path d="M-22 44 L-30 92 L-11 80 L-2 98 L-2 50 Z" fill="url(#ribbon)"/>
-    <path d="M22 44 L30 92 L11 80 L2 98 L2 50 Z" fill="url(#ribbon)"/>
+    <path d="M-17 34 L-23 70 L-8 61 L-1.5 74 L-1.5 39 Z" fill="url(#ribbon)"/>
+    <path d="M17 34 L23 70 L8 61 L1.5 74 L1.5 39 Z" fill="url(#ribbon)"/>
   </g>
 
   <!-- Signature rules -->

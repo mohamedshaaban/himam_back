@@ -8,8 +8,10 @@
     "Badge revoked.": "اعزاز واپس لے لیا گیا۔",
     "Book deleted.": "کتاب حذف کر دی گئی۔",
     "Certificate revoked.": "سند واپس لے لی گئی۔",
+    "Excellent": "درجہ: ممتاز",
     "File deleted.": "فائل حذف کر دی گئی۔",
     "Finish the previous book in this programme first.": "پہلے اس پروگرام کی پچھلی کتاب مکمل کریں۔",
+    "Good": "درجہ: اچھا",
     "If that address has an account, a reset link is on its way.": "اگر اس پتے کا اکاؤنٹ موجود ہے تو لنک بھیجا جا چکا ہے۔",
     "Improve your score": "اپنا نتیجہ بہتر بنائیں",
     "Language deleted.": "زبان حذف کر دی گئی۔",
@@ -18,6 +20,7 @@
     "No certificate matches this code.": "اس کوڈ سے کوئی سند نہیں ملتی۔",
     "No exam has been written for this book yet.": "اس کتاب کے سوالات ابھی نہیں لکھے گئے۔",
     "Page deleted.": "صفحہ حذف کر دیا گیا۔",
+    "Pass": "درجہ: قابلِ قبول",
     "Password updated.": "پاس ورڈ تبدیل ہو گیا۔",
     "Program deleted.": "پروگرام حذف کر دیا گیا۔",
     "Provide a value in at least one language.": "کم از کم ایک زبان میں قیمت درج کریں۔",
@@ -32,9 +35,12 @@
     "That page does not exist.": "یہ صفحہ موجود نہیں۔",
     "The current password is incorrect.": "موجودہ پاس ورڈ درست نہیں۔",
     "These credentials do not match our records.": "یہ تفصیلات ہمارے ریکارڈ سے میل نہیں کھاتیں۔",
+    "This is to certify that": "تصدیق کی جاتی ہے کہ",
     "This reset link is invalid or has expired. Please request a new one.": "یہ لنک درست نہیں یا اس کی میعاد ختم ہو چکی ہے۔ نیا لنک طلب کریں۔",
     "User deleted.": "صارف حذف کر دیا گیا۔",
+    "Very good": "درجہ: بہت اچھا",
     "You cannot delete your own account.": "آپ اپنا اکاؤنٹ حذف نہیں کر سکتے۔",
     "You cannot remove your own administrator role.": "آپ اپنا انتظامی اختیار خود نہیں ہٹا سکتے۔",
-    "Your password has been reset. You can sign in now.": "آپ کا پاس ورڈ تبدیل ہو گیا۔ اب آپ داخل ہو سکتے ہیں۔"
+    "Your password has been reset. You can sign in now.": "آپ کا پاس ورڈ تبدیل ہو گیا۔ اب آپ داخل ہو سکتے ہیں۔",
+    "has successfully completed": "نے کامیابی سے مکمل کیا"
 }

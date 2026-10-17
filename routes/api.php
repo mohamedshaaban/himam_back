@@ -51,6 +51,12 @@ Route::get('honor-board', Api\HonorBoardController::class);
 // Behind the QR code on every certificate.
 Route::get('certificates/verify/{code}', [Api\CertificateController::class, 'verify']);
 
+// The certificate as a document. Public, and keyed by the same unguessable
+// code as the line above rather than by id: a certificate is meant to be
+// shown to people who are not readers of this app, and a sequential id would
+// let anyone walk the list of holders' names.
+Route::get('certificates/verify/{code}/image', [Api\CertificateController::class, 'image']);
+
 // ─── Authenticated reader ────────────────────────────────────────────────────
 
 Route::middleware('auth:sanctum')->group(function () {

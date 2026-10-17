@@ -16,10 +16,12 @@ class CertificateResource extends JsonResource
             'serial' => $this->serial,
             'title' => $this->t('title'),
 
-            // The artwork to draw the holder's name over. A certificate with
-            // nothing of its own falls back to the programme's template, which
-            // is what they all use until one is designed for a given level.
-            'image' => Media::url($this->image ?: PublishCertificateTemplate::PATH),
+            // The certificate as a document, already carrying this reader's
+            // name, the title, the serial and the date. `image_template` is
+            // the blank artwork behind it, for a client that would rather lay
+            // the text out itself.
+            'image' => url("/api/certificates/verify/{$this->verification_code}/image"),
+            'image_template' => Media::url($this->image ?: PublishCertificateTemplate::PATH),
             'issued_at' => $this->issued_at?->toDateString(),
             'level' => new LevelResource($this->whenLoaded('level')),
             'book' => new BookResource($this->whenLoaded('book')),
