@@ -133,6 +133,7 @@ class User extends Authenticatable
     public function forgetProgress(): static
     {
         $this->progressRows = null;
+        $this->examResults = null;
 
         return $this;
     }
@@ -155,6 +156,32 @@ class User extends Authenticatable
      * Books this reader has opened, for the ones that are one document and so
      * have no sections to count.
      */
+    /**
+     * The best this reader has done on each book's exam.
+     *
+     * One query for the whole catalogue rather than one per book: the screen
+     * that lists books needs this for every row to decide what its exam button
+     * should say.
+     *
+     * @return array<int, array{best: int, total: int, passed: bool}>
+     */
+    public function bookExamResults(): array
+    {
+        return $this->examResults ??= $this->quizAttempts()
+            ->whereNotNull('book_id')
+            ->selectRaw('book_id, MAX(score) as best, MAX(total) as total, MAX(passed) as passed')
+            ->groupBy('book_id')
+            ->get()
+            ->mapWithKeys(fn ($row) => [(int) $row->book_id => [
+                'best' => (int) $row->best,
+                'total' => (int) $row->total,
+                'passed' => (bool) $row->passed,
+            ]])
+            ->all();
+    }
+
+    private ?array $examResults = null;
+
     public function readBookIds(): array
     {
         return $this->progressRows()

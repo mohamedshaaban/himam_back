@@ -44,6 +44,7 @@ class ProgramAccess
     public function books(Program $program, ?User $user): array
     {
         $readSections = $user ? $user->readSectionIds() : [];
+        $readBooks = $user ? $user->readBookIds() : [];
         $passedBooks = $user ? $user->passedBookIds() : [];
         $books = $program->relationLoaded('books')
             ? $program->books
@@ -60,6 +61,12 @@ class ProgramAccess
 
             $completed = $book->completedBy($passedBooks);
 
+            // Steps rather than sections, so a programme's figure means the
+            // same thing a book's does: everything read, and every exam sat.
+            $book->readerFullyRead = $book->fullyReadBy($readSections, $readBooks, $sectionIds);
+            $steps = max($total, 1) + 1;
+            $stepsDone = ($total > 0 ? $read : ($book->readerFullyRead ? 1 : 0)) + ($completed ? 1 : 0);
+
             // A book the reader has already finished stays open even if the
             // one now before it has not been. Reordering a programme must not
             // take back what someone has already read — and showing a locked
@@ -75,6 +82,9 @@ class ProgramAccess
                 'completed' => $completed,
                 'sections_read' => $read,
                 'sections_total' => $total,
+                'percent' => (int) round($stepsDone / $steps * 100),
+                'steps_done' => $stepsDone,
+                'steps_total' => $steps,
             ];
 
             if ($program->isSequential()) {

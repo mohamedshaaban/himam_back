@@ -47,6 +47,8 @@ class BookController extends Controller
             ? $book->fullyReadBy($read, $request->user()->readBookIds(), $book->sections->pluck('id'))
             : null;
 
+        $book->readerExam = $request->user()?->bookExamResults()[$book->id] ?? null;
+
         foreach ($book->sections as $section) {
             $section->readerRead = in_array($section->id, $read, true);
         }
@@ -71,6 +73,7 @@ class BookController extends Controller
         $passedBooks = $user->passedBookIds();
         $readSections = $user->readSectionIds();
         $readBooks = $user->readBookIds();
+        $examResults = $user->bookExamResults();
 
         // One query for every book's section ids, rather than one per book.
         // On a database in another region each of those round trips costs more
@@ -97,18 +100,22 @@ class BookController extends Controller
             $total = $sectionIds->count();
             $read = $sectionIds->intersect($readSections)->count();
 
-            // Sections are read, not passed — the exam is the book's. So the
-            // only section-level measure is how much has been read, and
-            // `completed` answers whether the book itself is done.
+            // What the exam button hangs on: the whole book read, not part.
+            $book->readerFullyRead = $book->fullyReadBy($readSections, $readBooks, $sectionIds);
+            $book->readerExam = $examResults[$book->id] ?? null;
+
+            $completed = $book->completedBy($passedBooks);
+
+            // Two figures, because they answer different questions. read_percent
+            // is how much of the text has been opened; percent is how far
+            // through the book as a whole, which includes sitting its exam.
             $book->readerProgress = [
                 'sections_total' => $total,
                 'sections_read' => $read,
                 'read_percent' => $total > 0 ? (int) round($read / $total * 100) : 0,
-                'completed' => $book->completedBy($passedBooks),
+                'percent' => $book->completionPercent($total, $read, $completed),
+                'completed' => $completed,
             ];
-
-            // What the exam button hangs on: the whole book read, not part.
-            $book->readerFullyRead = $book->fullyReadBy($readSections, $readBooks, $sectionIds);
         }
     }
 }

@@ -57,6 +57,12 @@ class Book extends Model
      */
     public ?bool $readerFullyRead = null;
 
+    /**
+     * This reader's best attempt at the book's exam, as
+     * ['best' => int, 'total' => int, 'passed' => bool], or null for never sat.
+     */
+    public ?array $readerExam = null;
+
     public function scopePublished(Builder $query): Builder
     {
         return $query->where('is_published', true)
@@ -163,21 +169,56 @@ class Book extends Model
      */
     public function quizButton(): array
     {
-        $label = $this->t('quiz_button_label') ?: __('Take the quiz');
+        // A reader who already scored full marks has nothing left to gain, so
+        // the button goes rather than inviting them to repeat a perfect paper.
+        $exam = $this->readerExam;
+        $perfect = $exam !== null
+            && $exam['total'] > 0
+            && $exam['best'] >= $exam['total'];
 
         $reason = match (true) {
             ! $this->hasOwnQuiz() => 'no_questions',
             ! $this->quiz_button_visible => 'hidden',
             $this->readerFullyRead === null => 'not_signed_in',
             $this->readerFullyRead === false => 'unread',
+            $perfect => 'perfect',
             default => null,
         };
+
+        // Having passed but not perfectly, what is on offer is a better mark,
+        // not the exam — so the button says so.
+        $improving = $exam !== null && $exam['passed'] && ! $perfect;
+
+        $label = $improving
+            ? __('Improve your score')
+            : ($this->t('quiz_button_label') ?: __('Take the quiz'));
 
         return [
             'visible' => $reason === null,
             'label' => $label,
             'reason' => $reason,
         ];
+    }
+
+    /**
+     * How far through this book the reader is, as a percentage.
+     *
+     * The exam counts as one step beside the sections, because that is what it
+     * is: reading every section of a three-section book is three of the four
+     * things there are to do, and the fourth is sitting the paper. Counting
+     * only the reading reported a book as finished while its exam was still
+     * untouched.
+     *
+     * @param  int  $sectionsTotal  0 for a book that is one document
+     */
+    public function completionPercent(int $sectionsTotal, int $sectionsRead, bool $completed): int
+    {
+        // A book read as one document still has the opening to do.
+        $steps = max($sectionsTotal, 1) + 1;
+        $done = ($sectionsTotal > 0 ? $sectionsRead : ($this->readerFullyRead ? 1 : 0))
+            + ($completed ? 1 : 0);
+
+        return (int) round($done / $steps * 100);
     }
 
     /**

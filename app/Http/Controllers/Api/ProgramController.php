@@ -77,6 +77,7 @@ class ProgramController extends Controller
             'blocked_by' => $row['blocked_by'],
             'completed' => $row['completed'],
             'sections_read' => $row['sections_read'],
+            'percent' => $row['percent'],
             'sections_total' => $row['sections_total'],
         ]);
 
@@ -149,14 +150,17 @@ class ProgramController extends Controller
     }
 
     /**
-     * Percentage by sections rather than by books, so a long book in progress
-     * registers as progress instead of as nothing.
+     * By steps rather than by books, so a long book in progress registers as
+     * progress instead of as nothing — and so finishing the reading of every
+     * book does not read as having finished the programme.
      */
     private function percent(array $rows): int
     {
-        $total = array_sum(array_column($rows, 'sections_total'));
-        $read = array_sum(array_column($rows, 'sections_read'));
+        // Summed over the same steps the books report, so the programme's
+        // figure cannot say 100% while two of its books have untouched exams.
+        $total = array_sum(array_column($rows, 'steps_total'));
+        $done = array_sum(array_column($rows, 'steps_done'));
 
-        return $total > 0 ? (int) round($read / $total * 100) : 0;
+        return $total > 0 ? (int) round($done / $total * 100) : 0;
     }
 }
