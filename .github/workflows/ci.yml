@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # An advisory is published against code that has not changed, so waiting for
+  # the next push would mean finding out whenever someone next happened to
+  # commit. Monday morning, before the week's work starts.
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Audit, boot and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          # The version the Dockerfile builds on. Testing against anything else
+          # would prove something about a PHP this never runs on.
+          php-version: '8.2'
+          extensions: mbstring, intl, pdo_sqlite, pdo_mysql, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer/files
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: composer.json and composer.lock agree
+        run: composer validate --strict
+
+      - name: Install
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      # The reason this workflow exists. Audits the lock file, so a vulnerable
+      # package is caught whether or not it was installed on this runner.
+      - name: Security advisories
+        run: composer audit --locked --no-interaction
+
+      - name: Prepare an environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          # A file rather than :memory:, so the schema survives between the
+          # artisan calls below.
+          touch database/ci.sqlite
+        env:
+          DB_CONNECTION: sqlite
+
+      # Boot checks. Most of what breaks on a dependency bump breaks here,
+      # before any test runs: a container that cannot resolve, a route file
+      # that will not compile, a migration that no longer applies.
+      - name: Migrations apply to an empty database
+        run: php artisan migrate --force --no-interaction
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/ci.sqlite
+          CACHE_STORE: array
+
+      - name: The application boots and its routes resolve
+        run: |
+          php artisan about --only=environment
+          php artisan route:list --path=api > /dev/null
+          echo "routes: $(php artisan route:list --path=api --json | php -r 'echo count(json_decode(file_get_contents("php://stdin"), true));')"
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/ci.sqlite
+          CACHE_STORE: array
+
+      - name: The seeders run
+        run: php artisan db:seed --force --no-interaction
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/ci.sqlite
+          CACHE_STORE: array
+
+      - name: Tests
+        run: php artisan test
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          CACHE_STORE: array
