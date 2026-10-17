@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Certificate;
 use App\Models\QuizAttempt;
+use BaconQrCode\Common\ErrorCorrectionLevel;
+use BaconQrCode\Encoder\Encoder;
 
 /**
  * Draws one reader's certificate.
@@ -79,7 +81,64 @@ class CertificateImage
 
         return "\n  <!-- Filled per certificate by CertificateImage. -->\n  <g>\n    "
             .implode("\n    ", $lines)
-            ."\n  </g>";
+            ."\n  </g>"
+            .$this->qr($certificate);
+    }
+
+    /**
+     * The verification QR.
+     *
+     * Drawn as squares in the document's own coordinates rather than embedded
+     * as an image, so it scales with everything else and survives printing,
+     * where a bitmap at this size would not.
+     *
+     * Medium error correction, which tolerates roughly 15% of the code being
+     * obscured — enough for a fold or a thumbprint on a printed copy.
+     */
+    private function qr(Certificate $certificate): string
+    {
+        $url = url('/api/certificates/verify/'.$certificate->verification_code);
+
+        $matrix = Encoder::encode($url, ErrorCorrectionLevel::M())->getMatrix();
+        $count = $matrix->getWidth();
+
+        // 92 units square, lower left: inside the border, clear of the seal in
+        // the middle and above the signature rule, which it used to cross.
+        $size = 92;
+        $originX = 96;
+        $originY = 552;
+        $cell = $size / $count;
+
+        $squares = '';
+        for ($y = 0; $y < $count; $y++) {
+            for ($x = 0; $x < $count; $x++) {
+                if (! $matrix->get($x, $y)) {
+                    continue;
+                }
+
+                // The half-unit overlap closes the hairline gaps a renderer
+                // leaves between rects at fractional coordinates, which a
+                // scanner reads as broken modules.
+                $squares .= sprintf(
+                    '<rect x="%.2f" y="%.2f" width="%.2f" height="%.2f"/>',
+                    $originX + $x * $cell,
+                    $originY + $y * $cell,
+                    $cell + 0.5,
+                    $cell + 0.5
+                );
+            }
+        }
+
+        $caption = htmlspecialchars(__('Scan to verify'), ENT_XML1 | ENT_QUOTES, 'UTF-8');
+
+        return "\n  <!-- Verification QR -->\n  <g>\n"
+            .sprintf('    <rect x="%d" y="%d" width="%d" height="%d" fill="#FFFFFF"/>',
+                $originX - 7, $originY - 7, $size + 14, $size + 14)."\n"
+            .'    <g fill="#143353">'.$squares."</g>\n"
+            .sprintf(
+                '    <text x="%d" y="%d" text-anchor="middle" font-family="%s" font-size="11" fill="#A09B8C" direction="rtl">%s</text>',
+                (int) ($originX + $size / 2), $originY + $size + 22, self::SERIF, $caption
+            )."\n  </g>";
     }
 
     /**
