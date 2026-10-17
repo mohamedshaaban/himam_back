@@ -30,7 +30,41 @@ class CertificateImage
     {
         $svg = file_get_contents(self::TEMPLATE);
 
-        return str_replace('</svg>', $this->layer($certificate)."\n</svg>\n", $svg);
+        // In the holder's own language, whoever is looking.
+        //
+        // This endpoint is public, so the request's Accept-Language is
+        // whatever phone scanned the code — and a certificate that read
+        // Arabic for its owner and English for the colleague they showed it
+        // to would be two different documents. Worse, it was already mixing
+        // them: the artwork's heading is Arabic, so an English body arrived
+        // half translated.
+        $locale = $certificate->user?->locale;
+
+        return $this->inLocale($locale, fn () => str_replace(
+            '</svg>',
+            $this->layer($certificate)."\n</svg>\n",
+            $svg
+        ));
+    }
+
+    /**
+     * Runs the callback with the application in one language, and puts the
+     * previous one back whatever happens.
+     */
+    private function inLocale(?string $locale, callable $callback): string
+    {
+        if (! $locale || ! app(LocaleRegistry::class)->supports($locale)) {
+            return $callback();
+        }
+
+        $previous = app()->getLocale();
+        app()->setLocale($locale);
+
+        try {
+            return $callback();
+        } finally {
+            app()->setLocale($previous);
+        }
     }
 
     /**
@@ -69,7 +103,9 @@ class CertificateImage
             $this->text(561, 538, 26, '#1E4E79', $title, $rtl),
         ];
 
-        if ($level) {
+        // A level certificate's title is the level's name, so printing both
+        // said the same thing twice.
+        if ($level && $level !== $title) {
             $lines[] = $this->text(561, 572, 15, '#6B6A63', $level, $rtl);
         }
 
