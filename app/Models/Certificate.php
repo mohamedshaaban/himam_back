@@ -13,7 +13,7 @@ class Certificate extends Model
 
     protected $fillable = [
         'user_id', 'level_id', 'book_id',
-        'serial', 'verification_code', 'title', 'issued_at',
+        'serial', 'verification_code', 'title', 'image', 'issued_at',
     ];
 
     public array $translatable = ['title'];

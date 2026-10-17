@@ -73,6 +73,7 @@ php artisan storage:link --force || true
 # stops those sections pointing at nothing after a deploy. Real uploads need
 # object storage; this only covers the file that ships with the repository.
 php artisan himam:publish-sample-pdf || true
+php artisan himam:publish-certificate-template || true
 
 php artisan config:cache
 php artisan route:cache

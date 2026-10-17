@@ -108,6 +108,9 @@ class CertificateController extends Controller
             ...$subject,
             'title' => $title,
             'earned' => (bool) $certificate,
+            'image' => \App\Support\Media::url(
+                $certificate?->image ?: \App\Console\Commands\PublishCertificateTemplate::PATH
+            ),
             'serial' => $certificate?->serial,
             'issued_at' => $certificate?->issued_at?->toDateString(),
             'verification_url' => $certificate

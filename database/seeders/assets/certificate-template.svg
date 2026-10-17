@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The placeholder certificate.
+
+  Drawn rather than photographed so it stays a few kilobytes and scales to any
+  screen without blurring. Landscape A4 proportions (1123 × 794 at 96dpi), so
+  it prints on one sheet without cropping.
+
+  Everything here is decoration. The reader's name, the title and the serial
+  come from the certificate endpoints and are drawn over it by the client,
+  which is why the middle is deliberately empty: a name rendered into the image
+  could not be localised, and would be wrong the moment a reader changed it.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1123 794" width="1123" height="794"
+     role="img" aria-label="شهادة اجتياز — جمعية مرتقي العلمية">
+
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C9A227"/>
+      <stop offset="0.45" stop-color="#F0D98C"/>
+      <stop offset="0.55" stop-color="#E6C65C"/>
+      <stop offset="1" stop-color="#A6821B"/>
+    </linearGradient>
+
+    <linearGradient id="navy" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#143353"/>
+      <stop offset="1" stop-color="#0C2238"/>
+    </linearGradient>
+
+    <linearGradient id="ribbon" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1E4E79"/>
+      <stop offset="1" stop-color="#143353"/>
+    </linearGradient>
+
+    <!-- A corner flourish, mirrored into all four corners. -->
+    <g id="corner">
+      <path d="M0 0 H120 M0 0 V120" stroke="url(#gold)" stroke-width="3" fill="none"/>
+      <path d="M14 14 H96 M14 14 V96" stroke="url(#gold)" stroke-width="1.2" fill="none" opacity="0.75"/>
+      <circle cx="14" cy="14" r="4.5" fill="url(#gold)"/>
+      <path d="M30 30 q22 4 34 22 q-18 -8 -34 -4 q4 -10 0 -18 Z"
+            fill="url(#gold)" opacity="0.5"/>
+    </g>
+  </defs>
+
+  <!-- Paper -->
+  <rect width="1123" height="794" fill="#FBF9F4"/>
+  <rect width="1123" height="794" fill="none" stroke="#EFE8D8" stroke-width="2"/>
+
+  <!-- A faint medallion behind the middle, so the empty space does not read as unfinished -->
+  <g opacity="0.05">
+    <circle cx="561" cy="400" r="210" fill="none" stroke="#143353" stroke-width="2"/>
+    <circle cx="561" cy="400" r="168" fill="none" stroke="#143353" stroke-width="1"/>
+    <circle cx="561" cy="400" r="126" fill="none" stroke="#143353" stroke-width="1"/>
+  </g>
+
+  <!-- Border -->
+  <rect x="26" y="26" width="1071" height="742" fill="none" stroke="url(#gold)" stroke-width="4"/>
+  <rect x="40" y="40" width="1043" height="714" fill="none" stroke="url(#gold)" stroke-width="1.2" opacity="0.7"/>
+
+  <!-- Header band -->
+  <path d="M40 40 H1083 V150 H40 Z" fill="url(#navy)"/>
+  <path d="M40 150 H1083" stroke="url(#gold)" stroke-width="3"/>
+
+  <text x="561" y="96" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+        font-size="42" fill="#F0D98C" letter-spacing="2">شهادة اجتياز</text>
+  <text x="561" y="128" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+        font-size="17" fill="#C8D6E5" letter-spacing="1">جمعية مرتقي العلمية — برنامج همم</text>
+
+  <!-- After the header band, not before: drawn first, the top two were painted
+       over by it and only the bottom pair survived.
+       translate-then-scale rather than transform-origin, which <use> honours
+       inconsistently. -->
+  <g transform="translate(40,40)"><use href="#corner"/></g>
+  <g transform="translate(1083,40) scale(-1,1)"><use href="#corner"/></g>
+  <g transform="translate(40,754) scale(1,-1)"><use href="#corner"/></g>
+  <g transform="translate(1083,754) scale(-1,-1)"><use href="#corner"/></g>
+
+  <!-- Where the client draws the holder's name and the book -->
+  <line x1="300" y1="470" x2="822" y2="470" stroke="#D8CFB6" stroke-width="1.5"/>
+  <line x1="380" y1="556" x2="742" y2="556" stroke="#D8CFB6" stroke-width="1.5"/>
+
+  <!-- Seal -->
+  <g transform="translate(561 648)">
+    <circle r="54" fill="url(#gold)"/>
+    <circle r="45" fill="#FBF9F4"/>
+    <circle r="40" fill="none" stroke="url(#gold)" stroke-width="2"/>
+    <path d="M0 -26 L7.6 -8.1 L27 -8.1 L11.6 3.1 L17.6 21.9 L0 10.5 L-17.6 21.9 L-11.6 3.1 L-27 -8.1 L-7.6 -8.1 Z"
+          fill="url(#gold)"/>
+    <!-- Ribbon tails -->
+    <path d="M-22 44 L-30 92 L-11 80 L-2 98 L-2 50 Z" fill="url(#ribbon)"/>
+    <path d="M22 44 L30 92 L11 80 L2 98 L2 50 Z" fill="url(#ribbon)"/>
+  </g>
+
+  <!-- Signature rules -->
+  <g stroke="#C9BFA4" stroke-width="1.2">
+    <line x1="150" y1="690" x2="370" y2="690"/>
+    <line x1="752" y1="690" x2="972" y2="690"/>
+  </g>
+  <text x="260" y="714" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#6B6A63">
+    إدارة البرنامج
+  </text>
+  <text x="862" y="714" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#6B6A63">
+    رئيس الجمعية
+  </text>
+
+  <!-- Footer rule -->
+  <path d="M40 754 H1083" stroke="url(#gold)" stroke-width="3"/>
+</svg>
